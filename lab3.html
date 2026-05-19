@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Покупки</title>
+    <style>
+        body {
+            font-family: 'Cambria', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            max-width: 900px;
+            width: 100%;
+            background: rgb(230, 240, 226);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            padding: 20px 30px 30px 30px;
+            box-sizing: border-box;
+        }
+        h1 {
+            text-align: center;
+            font-size: 28px;
+            font-weight: 600;
+            margin-top: 0;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 15px 0;
+            font-size: 15px;
+        }
+        th, td {
+            border: 2px solid #91c29c;
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #b5daaa;
+            font-weight: 600;
+        }
+        .bold {
+            font-weight: 700;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        .report-block {
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Покупки</h1>
+    <div id="report" class="report-block"></div>
+</div>
+
+<script>
+    const database = [
+       
+        [["батон", "кефир", "печенье", "йогурт"], 60, 90, undefined, 250, {"FIO": "noname", "day": [5, "март", 1995]}],
+        [null, 25000, 5000, ["наушники", "пауэрбанк", "пицца"]], 
+        
+
+        [{"FIO": "noname", "day": [1, "январь", 2001]}, ["шоколад", "чипсы", "сок"], 180, undefined, 90],
+        [["шампунь", "гель для душа", "зубная паста", "печенье"], 350, 280, 150, 70, {"FIO": "Козлова Елена", "day": [15, "август", 1990]}],
+        [1200, 3500, ["кружка", "чайник", "печенье"], null],
+
+    ];
+
+    function isField1(item) {
+        if (item === null) return true;
+        if (typeof item === "object" && item !== null && !Array.isArray(item)) {
+            return item.hasOwnProperty("FIO") && item.hasOwnProperty("day");
+        }
+        return false;
+    }
+    
+    function isField2(item) {
+        if (!Array.isArray(item)) return false;
+        if (item.length === 0) return true;
+        return typeof item[0] === "string";
+    }
+    
+    function isField3Value(item) {
+        return (typeof item === "number") || (item === undefined);
+    }
+    
+    function extractFields(client) {
+        let field1 = null;
+        let field2 = null;
+        let field3Values = [];
+        
+        for (let i = 0; i < client.length; i++) {
+            let item = client[i];
+            if (isField1(item)) {
+                field1 = item;
+            } else if (isField2(item)) {
+                field2 = item;
+            } else if (isField3Value(item)) {
+                field3Values.push(item);
+            }
+        }
+        return { field1, field2, field3Values };
+    }
+
+    let validFIO = [];
+    let lostFIOcount = 0;
+    
+    for (let i = 0; i < database.length; i++) {   //потерянные люди
+        let fields = extractFields(database[i]);
+        let field1 = fields.field1;
+        
+        if (field1 === null) {
+            lostFIOcount++;
+        } else if (field1 !== null && typeof field1 === "object") {
+            if (field1.FIO === "noname") {
+                lostFIOcount++;
+            } else {
+                validFIO.push(field1.FIO);
+            }
+        }
+    }
+    
+    validFIO.sort();
+
+    let allGoods = [];
+    
+    for (let i = 0; i < database.length; i++) { //все товары
+        let fields = extractFields(database[i]);
+        let field2 = fields.field2;
+        
+        if (field2 !== null && Array.isArray(field2)) {
+            for (let j = 0; j < field2.length; j++) {
+                let good = field2[j];
+                if (good !== null && good !== undefined && good !== "") {
+                    allGoods.push(good);
+                }
+            }
+        }
+    }
+    
+    let goodsCount = {};
+    for (let i = 0; i < allGoods.length; i++) {   //колво товаров
+        let good = allGoods[i];
+        goodsCount[good] = (goodsCount[good] || 0) + 1;
+    }
+    
+    let uniqueGoods = [...new Set(allGoods)];
+    uniqueGoods.sort();
+    let totalUniqueGoods = uniqueGoods.length;
+
+    let allPrices = [];
+    for (let i = 0; i < database.length; i++) {   //все стоимости
+        let fields = extractFields(database[i]);
+        let field3Values = fields.field3Values;
+        
+        for (let j = 0; j < field3Values.length; j++) {
+            let price = field3Values[j];
+            if (price !== undefined && typeof price === "number") {
+                allPrices.push(price);
+            }
+        }
+    }
+    
+    let maxPrice = 0;
+    for (let i = 0; i < allPrices.length; i++) {
+        if (allPrices[i] > maxPrice) maxPrice = allPrices[i]; //макс
+    }
+    
+    let lostPurchasesCount = 0;
+    for (let i = 0; i < database.length; i++) {   //покупки с потер ценой
+        let fields = extractFields(database[i]);
+        let field3Values = fields.field3Values;
+        let field1=fields.field1;
+        if (field1 !== null && field1.FIO !== "noname"){
+        for (let j = 0; j < field3Values.length; j++) {
+            if (field3Values[j] === undefined ) {
+                lostPurchasesCount++;
+            }
+        }
+    }
+    }
+    
+    let container = document.getElementById("report");
+    let html = "";
+    
+    html += "<div class='bold'>Покупатели:</div>";
+    html += "<div>";
+    for (let i = 0; i < validFIO.length; i++) {
+        html += validFIO[i];
+        if (i < validFIO.length - 1) html += ", ";
+    }
+    html += "</div>";
+    html += "<div class='bold'>Кол-во покупателей с потерянным ФИО: " + lostFIOcount + "</div>";
+    html += "<br>";
+    
+    html += "<div class='bold'>Товары</div>";
+    html += "<table>";
+    html += "<tr><th>№</th><th>Товар</th><th>Сколько раз куплен</th></tr>";
+    
+    for (let i = 0; i < uniqueGoods.length; i++) {
+        let good = uniqueGoods[i];
+        let count = goodsCount[good];
+        html += "</tr>";
+        html += "<td>" + (i + 1) + "</td>";
+        html += "<td>" + good + "</td>";
+        html += "<td>" + count + "</td>";
+        html += "</tr>";
+    }
+    
+    html += "</table>";
+    html += "<div class='bold'>Всего уникальных товаров: " + totalUniqueGoods + "</div>";
+    html += "<br>";
+    
+    html += "<div class='bold'>Дополнительная информация:</div>";
+    html += "<div>Стоимость самой дорогой покупки: " + maxPrice + " руб.</div>";
+    html += "<div class='bold'>Дополнительная информация:</div>";
+    html += "<div>Общее количество покупок с потерянной информацией (нет стоимости): " + lostPurchasesCount + "</div>";
+    
+    container.innerHTML = html;
+</script>
+</body>
+</html>

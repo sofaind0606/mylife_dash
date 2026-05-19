@@ -1,0 +1,951 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LifeDashboard | Неделя (режимы)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --color-primary: #93ABDB;
+            --color-primary-dark: #768FC2;
+            --color-primary-light: #C2D4F5;
+            --color-secondary: #FAF4CD;
+            --color-secondary-dark: #E6DFB3;
+            --color-secondary-light: #FFF9E6;
+            --color-accent: #5B6F9E;
+            --color-text: #3D4A66;
+            --color-text-light: #6B7C9E;
+            --color-text-muted: #A5B3CC;
+            --color-bg: #FDFBF0;
+            --color-bg-alt: #FFFFFF;
+            --color-border: #FAF4CD;
+            --color-border-light: #FFF4E0;
+            --shadow-sm: 0 2px 8px rgba(91, 111, 158, 0.05);
+            --shadow-md: 0 4px 15px rgba(91, 111, 158, 0.08);
+            --shadow-lg: 0 10px 30px rgba(91, 111, 158, 0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        body { font-family: 'Inter', sans-serif; background: var(--color-bg); color: var(--color-text); line-height: 1.5; }
+
+        .app-layout { display: flex; min-height: 100vh; position: relative; overflow-x: hidden; }
+        .burger-btn { display: none; position: fixed; top: 16px; left: 16px; z-index: 1003; width: 44px; height: 44px; background: var(--color-primary); border: none; border-radius: 50%; color: white; font-size: 1.6rem; cursor: pointer; box-shadow: var(--shadow-md); align-items: center; justify-content: center; }
+
+        .nav-frame {
+            width: 18%;
+            min-width: 200px;
+            background: var(--color-primary);
+            padding: 24px 16px;
+            border-right: 2px solid var(--color-primary-dark);
+            position: fixed;
+            height: 100vh;
+            overflow-y: auto;
+            z-index: 100;
+            box-shadow: 4px 0 20px rgba(62, 92, 102, 0.15);
+            transition: transform 0.3s ease;
+        }
+
+        .logo { margin-bottom: 16px; padding: 12px; border-bottom: 2px solid #ffffff; text-align: center; background: rgba(255, 255, 255, 0.1); border-radius: 12px; }
+        .logo h1 { color: #ffffff; font-size: 1.2rem; font-weight: 700; }
+        .logo p { color: var(--color-bg); font-size: 0.75rem; opacity: 0.9; }
+        .nav-section { margin-bottom: 20px; }
+        .nav-title { color: rgba(255,255,255,0.7); font-size: 0.85em; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; padding-left: 8px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; color: whitesmoke; text-decoration: none; border-radius: var(--radius-md); margin-bottom: 4px; transition: var(--transition); font-weight: 600; }
+        .nav-item:hover { background: var(--color-primary-dark); transform: translateX(4px); }
+        .nav-item.active { background: var(--color-accent); font-weight: 700; }
+
+        .content-area {
+            flex: 1;
+            margin-left: 18%;
+            padding: 24px 32px;
+            max-width: 1400px;
+            width: 100%;
+        }
+
+        .main-card {
+            background: var(--color-bg-alt);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            border: 2px solid var(--color-border);
+            box-shadow: var(--shadow-sm);
+        }
+        .main-card h2 {
+            color: var(--color-primary-dark);
+            font-weight: 700;
+            font-size: 1.4em;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--color-border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        /* Кнопка переключения режима (только на компьютере) */
+        .mode-toggle-btn {
+            background: var(--color-secondary);
+            border: none;
+            font-size: 1.6rem;
+            cursor: pointer;
+            padding: 6px 12px;
+            border-radius: 40px;
+            transition: var(--transition);
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            color: var(--color-text);
+        }
+        .mode-toggle-btn:hover {
+            background: var(--color-primary);
+            color: white;
+            transform: scale(1.02);
+        }
+        @media (max-width: 768px) {
+            .mode-toggle-btn {
+                display: none;
+            }
+        }
+
+        .week-nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+        .week-nav button {
+            background: var(--color-secondary);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--color-text);
+            transition: var(--transition);
+            white-space: nowrap;
+            font-size: 0.85em;
+        }
+        .week-nav button:hover { background: var(--color-primary); color: white; transform: translateY(-2px); }
+
+        .week-interval {
+            text-align: center;
+            margin-bottom: 20px;
+            font-weight: bold;
+            color: var(--color-text);
+            font-size: 1.1em;
+            background: var(--color-secondary-light);
+            padding: 10px;
+            border-radius: var(--radius-lg);
+            cursor: pointer;
+            transition: var(--transition);
+            position: relative;
+        }
+        .week-interval:hover { background: var(--color-primary-light); }
+
+        .calendar-popup {
+            display: none;
+            position: absolute;
+            background: var(--color-bg-alt);
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-lg);
+            padding: 12px;
+            box-shadow: var(--shadow-lg);
+            z-index: 1000;
+            min-width: 280px;
+            margin-top: 8px;
+        }
+        .calendar-popup-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            text-align: center;
+        }
+        .calendar-grid div {
+            padding: 6px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 0.75em;
+        }
+        .calendar-grid div.header {
+            font-weight: bold;
+            color: var(--color-text-light);
+            cursor: default;
+        }
+        .calendar-grid div.selected { background: var(--color-primary); color: white; }
+        .calendar-grid div.today { border: 2px solid var(--color-primary); }
+
+        /* ===== ОБЩИЕ КОМПОНЕНТЫ для обоих режимов ===== */
+        .day-card {
+            background: var(--color-bg-alt);
+            border-radius: var(--radius-xl);
+            border: 1px solid var(--color-border-light);
+            overflow: hidden;
+            transition: var(--transition);
+            box-shadow: var(--shadow-sm);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+        .day-card.today {
+            border: 3px solid var(--color-primary);
+            background: #F8F9FF;
+            box-shadow: 0 8px 20px rgba(147, 171, 219, 0.2);
+        }
+        .day-header {
+            background: var(--color-primary);
+            color: white;
+            padding: 12px 20px;
+            font-weight: 700;
+            font-size: 1.2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .day-name {
+            display: flex;
+            gap: 12px;
+            align-items: baseline;
+            flex-wrap: wrap;
+        }
+        .day-weekday { font-size: 1.2rem; }
+        .day-date { font-size: 0.9rem; opacity: 0.9; font-weight: normal; }
+        
+        .round-add-btn {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.25);
+            border: none;
+            color: white;
+            font-size: 1.4rem;
+            font-weight: bold;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            backdrop-filter: blur(2px);
+        }
+        .round-add-btn:hover {
+            background: rgba(255,255,255,0.5);
+            transform: scale(1.05);
+        }
+
+        .tasks-list {
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            flex: 1;
+        }
+        .empty-day {
+            color: var(--color-text-light);
+            text-align: center;
+            padding: 20px;
+            font-style: italic;
+            background: var(--color-secondary-light);
+            border-radius: var(--radius-md);
+        }
+
+        /* Карточка задачи */
+        .task-item {
+            border-radius: var(--radius-md);
+            transition: var(--transition);
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        .task-item:hover {
+            transform: translateX(4px);
+            box-shadow: var(--shadow-md);
+        }
+        .task-item.important-task::before {
+            content: "⭐";
+            position: absolute;
+            top: 6px;
+            left: 8px;
+            font-size: 1rem;
+            z-index: 2;
+            background: transparent;
+            pointer-events: none;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+        .task-block {
+            padding: 12px 12px 12px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .task-row-top {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .task-checkbox-week {
+            width: 18px;
+            height: 18px;
+            margin-top: 2px;
+            accent-color: var(--color-accent);
+            flex-shrink: 0;
+        }
+        .task-time-range {
+            font-size: 0.7rem;
+            font-weight: 500;
+            background: rgba(0,0,0,0.08);
+            padding: 2px 8px;
+            border-radius: 20px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .task-text {
+            font-size: 0.9rem;
+            font-weight: 500;
+            line-height: 1.4;
+            flex: 1;
+            word-break: break-word;
+        }
+        .task-text.completed {
+            text-decoration: line-through;
+            opacity: 0.7;
+        }
+        .task-row-bottom {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-left: 28px;
+        }
+        .task-category-badge {
+            font-size: 0.65rem;
+            padding: 2px 10px;
+            border-radius: 20px;
+            background: rgba(0,0,0,0.15);
+            display: inline-block;
+        }
+        .task-delete-btn {
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            opacity: 0.5;
+            transition: var(--transition);
+            margin-left: auto;
+        }
+        .task-delete-btn:hover { opacity: 1; color: #e53e3e; }
+
+        /* Режим: вертикальный список (одна колонка) */
+        .vertical-list {
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        /* Режим: школьный дневник с парными блоками (3 строки, 2 колонки) */
+        .pair-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        /* Модальное окно */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(62, 92, 102, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: white;
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            width: 100%;
+            max-width: 500px;
+            border: 2px solid var(--color-border);
+            box-shadow: var(--shadow-lg);
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--color-border);
+        }
+        .modal-header h3 { color: var(--color-primary); font-weight: 700; margin: 0; }
+        .close-modal { background: none; border: none; font-size: 1.6em; cursor: pointer; color: var(--color-primary); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--color-primary-dark); }
+        .form-group input, .form-group select { width: 100%; padding: 10px 12px; background: var(--color-bg); border: 2px solid var(--color-border); border-radius: var(--radius-md); }
+        .time-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+        .time-row input { flex: 1; min-width: 130px; }
+        .save-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .save-btn:hover { transform: translateY(-2px); background: var(--color-primary-dark); }
+
+        /* Адаптация: на мобилках всегда вертикальный список */
+        @media (max-width: 1024px) {
+            .app-layout { flex-direction: column; }
+            .nav-frame {
+                width: 100%;
+                height: auto;
+                position: relative;
+                flex-direction: row;
+                flex-wrap: wrap;
+                padding: 12px 16px;
+                border-right: none;
+                border-bottom: 2px solid var(--color-primary);
+            }
+            .content-area { margin-left: 0; padding: 20px; }
+        }
+        @media (max-width: 768px) {
+            .burger-btn { display: flex; }
+            .nav-frame {
+                transform: translateX(-100%);
+                width: 80%;
+                max-width: 280px;
+                position: fixed;
+                top: 0;
+                left: 0;
+                flex-direction: column;
+                border-bottom: none;
+                border-right: 2px solid var(--color-primary-dark);
+                transition: transform 0.3s ease;
+                z-index: 1002;
+            }
+            .nav-frame.open { transform: translateX(0); }
+            .content-area { margin-left: 0; padding: 12px 12px 60px 12px; }
+            .overlay { 
+                display: none; 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                height: 100%; 
+                background: rgba(0,0,0,0.4); 
+                z-index: 1001; 
+                transition: opacity 0.3s; 
+                pointer-events: none;
+            }
+            .overlay.active { 
+                display: block; 
+                pointer-events: auto;
+            }
+            .main-card { padding: 16px; }
+            
+            .day-header { flex-wrap: nowrap; }
+            .round-add-btn { width: 32px; height: 32px; font-size: 1.2rem; flex-shrink: 0; }
+            .task-time-range { white-space: normal; word-break: keep-all; }
+            .task-block { padding-left: 28px; }
+        }
+        .overlay { display: none; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <button class="burger-btn" id="burgerBtn">☰</button>
+    <div class="overlay" id="overlay"></div>
+    <div class="app-layout">
+        <nav class="nav-frame" id="navFrame">
+            <div class="logo"><h1>📅 LifeDashboard</h1><p>Полный набор для продуктивности</p></div>
+            <div class="nav-section"><div class="nav-title">ГЛАВНОЕ</div><a href="index.html" class="nav-item">🏠 Главная</a><a href="day.html" class="nav-item">📆 План на день</a></div>
+            <div class="nav-section"><div class="nav-title">ПЛАНИРОВАНИЕ</div><a href="week.html" class="nav-item active">📋 Неделя</a><a href="month.html" class="nav-item">🗓️ Месяц</a><a href="year.html" class="nav-item">🎯 Год</a></div>
+            <div class="nav-section"><div class="nav-title">ТРЕКЕРЫ</div><a href="habits.html" class="nav-item">🔥 Привычки</a><a href="finance.html" class="nav-item">💰 Финансы</a><a href="media.html" class="nav-item">📚🎬 Книги и фильмы</a><a href="study.html" class="nav-item">📚 Учёба</a><a href="pomodoro.html" class="nav-item">🍅 Таймер помодоро</a></div>
+        </nav>
+        <div class="content-area">
+            <div class="main-card">
+                <h2>
+                    📋 План недели
+                    <button class="mode-toggle-btn" id="modeToggleBtn" title="Переключить режим отображения">⚙️</button>
+                </h2>
+                <div class="week-nav">
+                    <button onclick="prevWeek()">◀ Предыдущая</button>
+                    <button onclick="goToCurrentWeek()">Текущая</button>
+                    <button onclick="nextWeek()">Следующая ▶</button>
+                </div>
+                <div class="week-interval" id="weekInterval">
+                    <span id="intervalText"></span>
+                    <div id="calendarPopup" class="calendar-popup">
+                        <div class="calendar-popup-header">
+                            <button onclick="prevMonthPopup()">◀</button>
+                            <h3 id="calendarMonthYear"></h3>
+                            <button onclick="nextMonthPopup()">▶</button>
+                        </div>
+                        <div class="calendar-grid" id="calendarGrid"></div>
+                    </div>
+                </div>
+                <div id="weekContainer"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="taskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3 id="taskModalTitle">➕ Новая задача</h3><button class="close-modal" onclick="closeTaskModal()">✖</button></div>
+            <div class="form-group"><label>Название</label><input type="text" id="taskTitle" placeholder="Что нужно сделать?"></div>
+            <div class="form-group">
+                <label>Время (необязательно)</label>
+                <div class="time-row">
+                    <input type="time" id="taskStartTime" step="60">
+                    <span class="time-separator">—</span>
+                    <input type="time" id="taskEndTime" step="60">
+                </div>
+            </div>
+            <div class="form-group"><label>Категория</label><select id="taskCategory"></select></div>
+            <div class="form-group">
+                <label><input type="checkbox" id="taskImportant" style="width:18px;height:18px; vertical-align:middle;"> ⭐ Важная задача</label>
+            </div>
+            <button class="save-btn" onclick="saveTask()">💾 Сохранить</button>
+        </div>
+    </div>
+
+    <script>
+        let allTasks = JSON.parse(localStorage.getItem('allTasks')) || {};
+        let taskCategories = JSON.parse(localStorage.getItem('taskCategories')) || [
+            { id: 'work', name: 'Работа', color: '#B8CCE4' },
+            { id: 'study', name: 'Учёба', color: '#C8DFCF' },
+            { id: 'hobby', name: 'Хобби', color: '#F2E3D4' },
+            { id: 'rest', name: 'Отдых', color: '#DCCFEC' },
+            { id: 'family', name: 'Семья', color: '#F9E8D1' },
+            { id: 'sport', name: 'Спорт', color: '#CBE2DA' },
+            { id: 'selfdev', name: 'Саморазвитие', color: '#DBDDF0' },
+            { id: 'other', name: 'Без категории', color: '#E6E1D7' }
+        ];
+
+        let currentWeekOffset = 0;
+        let currentEditTask = { dateKey: null, taskId: null };
+        let firebaseReady = false, db = null, currentUser = null;
+        let calendarCurrentMonth = 0, calendarCurrentYear = 0;
+        
+        // Режим отображения: 'vertical' или 'paired'
+        let displayMode = localStorage.getItem('weekDisplayMode') || 'vertical';
+        
+        const firebaseConfig = {
+            apiKey: "AIzaSyARKWwV3cggOhda9g6cDNcEAGOpUN4O63I",
+            authDomain: "lifedashbord.firebaseapp.com",
+            projectId: "lifedashbord",
+            storageBucket: "lifedashbord.appspot.com",
+            messagingSenderId: "206574362724",
+            appId: "1:206574362724:web:83887cae4dc87b41137f71"
+        };
+        const dayNamesFull = ['Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота', 'Воскресенье'];
+        const dayNamesShort = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            initFirebase();
+            renderWeek();
+            // Кнопка переключения
+            const toggleBtn = document.getElementById('modeToggleBtn');
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    displayMode = (displayMode === 'vertical') ? 'paired' : 'vertical';
+                    localStorage.setItem('weekDisplayMode', displayMode);
+                    renderWeek();
+                });
+            }
+
+            const intervalDiv = document.getElementById('weekInterval');
+            const popup = document.getElementById('calendarPopup');
+            intervalDiv.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (popup.style.display === 'block') popup.style.display = 'none';
+                else {
+                    let centerDate = getStartOfWeek(new Date(), currentWeekOffset);
+                    calendarCurrentMonth = centerDate.getMonth();
+                    calendarCurrentYear = centerDate.getFullYear();
+                    renderCalendarPopup();
+                    popup.style.display = 'block';
+                    const rect = intervalDiv.getBoundingClientRect();
+                    popup.style.left = rect.left + 'px';
+                    popup.style.top = (rect.bottom + 5) + 'px';
+                }
+            });
+            document.addEventListener('click', (e) => {
+                if (!popup.contains(e.target) && !intervalDiv.contains(e.target)) popup.style.display = 'none';
+            });
+
+            const burger = document.getElementById('burgerBtn');
+            const nav = document.getElementById('navFrame');
+            const overlay = document.getElementById('overlay');
+            
+            // Открытие/закрытие меню
+            burger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                nav.classList.toggle('open');
+                overlay.classList.toggle('active');
+            });
+            
+            // Закрытие по клику на оверлей
+            overlay.addEventListener('click', () => {
+                nav.classList.remove('open');
+                overlay.classList.remove('active');
+            });
+            
+            // Закрытие меню при клике на ссылку навигации (переход произойдёт стандартно)
+            document.querySelectorAll('.nav-item').forEach(link => {
+                link.addEventListener('click', () => {
+                    setTimeout(() => {
+                        nav.classList.remove('open');
+                        overlay.classList.remove('active');
+                    }, 150);
+                });
+            });
+            
+            // Закрытие меню при клике на контент
+            document.querySelector('.content-area')?.addEventListener('click', () => {
+                if (nav.classList.contains('open')) {
+                    nav.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            });
+            
+            // Следим за шириной окна, чтобы на мобилках принудительно vertical
+            window.addEventListener('resize', () => { renderWeek(); });
+        });
+
+        function getDateKey(date) { return date.toISOString().split('T')[0]; }
+        function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+        function formatTimeRange(start, end) { 
+            if (!start && !end) return '';
+            if (start && !end) return `⏰ ${start}`;
+            if (!start && end) return `⏰ — ${end}`;
+            return `⏰ ${start} — ${end}`;
+        }
+        function formatDate(date) { return `${date.getDate()}.${date.getMonth()+1}`; }
+        function getStartOfWeek(baseDate, offset) {
+            let d = new Date(baseDate);
+            let day = d.getDay();
+            let diff = day === 0 ? -6 : 1 - day;
+            d.setDate(d.getDate() + diff + (offset * 7));
+            return d;
+        }
+        function generateTaskId() { return 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
+
+        function initFirebase() {
+            let timeout = setTimeout(() => { firebaseReady = false; }, 5000);
+            try {
+                if (typeof firebase === 'undefined') { clearTimeout(timeout); return; }
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                firebase.auth().onAuthStateChanged(user => {
+                    clearTimeout(timeout);
+                    if (user) {
+                        currentUser = user;
+                        firebaseReady = true;
+                        loadUserData();
+                    } else { firebaseReady = false; }
+                });
+            } catch(e) { clearTimeout(timeout); firebaseReady = false; }
+        }
+
+        function loadUserData() {
+            if (!currentUser || !db) return;
+            db.collection('users').doc(currentUser.uid).collection('tasks').get().then(snap => {
+                let loaded = {};
+                snap.forEach(doc => { loaded[doc.id] = doc.data(); });
+                if (JSON.stringify(allTasks) !== JSON.stringify(loaded)) {
+                    allTasks = loaded;
+                    localStorage.setItem('allTasks', JSON.stringify(allTasks));
+                    renderWeek();
+                }
+            });
+            db.collection('users').doc(currentUser.uid).collection('settings').doc('taskCategories').get().then(doc => {
+                if (doc.exists && doc.data().categories) {
+                    taskCategories = doc.data().categories;
+                    localStorage.setItem('taskCategories', JSON.stringify(taskCategories));
+                    renderWeek();
+                }
+            });
+        }
+
+        function saveAllTasks() {
+            localStorage.setItem('allTasks', JSON.stringify(allTasks));
+            if (firebaseReady && currentUser && db) {
+                Object.keys(allTasks).forEach(dateKey => {
+                    db.collection('users').doc(currentUser.uid).collection('tasks').doc(dateKey).set(allTasks[dateKey]);
+                });
+            }
+        }
+
+        function populateCategorySelect() {
+            let select = document.getElementById('taskCategory');
+            select.innerHTML = '';
+            taskCategories.forEach(cat => {
+                let opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderCalendarPopup() {
+            const firstDay = new Date(calendarCurrentYear, calendarCurrentMonth, 1);
+            const startDay = firstDay.getDay();
+            const daysInMonth = new Date(calendarCurrentYear, calendarCurrentMonth + 1, 0).getDate();
+            document.getElementById('calendarMonthYear').textContent = firstDay.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = '';
+            ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
+                let h = document.createElement('div'); h.className = 'header'; h.textContent = d; grid.appendChild(h);
+            });
+            let startOffset = (startDay === 0 ? 6 : startDay - 1);
+            for (let i = 0; i < startOffset; i++) { grid.appendChild(document.createElement('div')); }
+            const today = new Date();
+            let selectedWeekStart = getStartOfWeek(new Date(), currentWeekOffset);
+            for (let d = 1; d <= daysInMonth; d++) {
+                let cell = document.createElement('div');
+                let dateStr = `${calendarCurrentYear}-${String(calendarCurrentMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                cell.textContent = d;
+                if (dateStr === getDateKey(selectedWeekStart)) cell.classList.add('selected');
+                if (today.getFullYear() === calendarCurrentYear && today.getMonth() === calendarCurrentMonth && today.getDate() === d) cell.classList.add('today');
+                cell.onclick = (function(date) { return function() {
+                    let targetDate = new Date(date);
+                    let targetWeekStart = getStartOfWeek(targetDate, 0);
+                    let newOffset = Math.floor((targetWeekStart - getStartOfWeek(new Date(), 0)) / (7*24*60*60*1000));
+                    currentWeekOffset = newOffset;
+                    renderWeek();
+                    document.getElementById('calendarPopup').style.display = 'none';
+                }; })(dateStr);
+                grid.appendChild(cell);
+            }
+        }
+
+        function prevMonthPopup() { calendarCurrentMonth--; if (calendarCurrentMonth < 0) { calendarCurrentMonth = 11; calendarCurrentYear--; } renderCalendarPopup(); }
+        function nextMonthPopup() { calendarCurrentMonth++; if (calendarCurrentMonth > 11) { calendarCurrentMonth = 0; calendarCurrentYear++; } renderCalendarPopup(); }
+
+        // Функция рендеринга карточки дня
+        function renderDayCard(day) {
+            let tasksHtml = '';
+            day.tasks.forEach(task => {
+                let catId = task.category || 'other';
+                let cat = taskCategories.find(c => c.id === catId) || { id: 'other', name: 'Без категории', color: '#E6E1D7' };
+                let completedClass = task.completed ? 'completed' : '';
+                let importantClass = task.important ? 'important-task' : '';
+                let timeRange = formatTimeRange(task.startTime, task.endTime);
+                let taskStyle = `background-color: ${cat.color}; border: 1px solid rgba(0,0,0,0.1);`;
+                
+                tasksHtml += `
+                    <div class="task-item ${importantClass}" style="${taskStyle}" onclick="openEditTaskModal('${day.dateKey}', '${task.id}')">
+                        <div class="task-block">
+                            <div class="task-row-top">
+                                <input type="checkbox" class="task-checkbox-week" ${task.completed ? 'checked' : ''} onclick="event.stopPropagation(); toggleTaskComplete('${day.dateKey}', '${task.id}', this.checked)">
+                                ${timeRange ? `<div class="task-time-range">${timeRange}</div>` : ''}
+                                <div class="task-text ${completedClass}">${escapeHtml(task.text)}</div>
+                                <button class="task-delete-btn" onclick="event.stopPropagation(); deleteTask('${day.dateKey}', '${task.id}')" title="Удалить">✖</button>
+                            </div>
+                            <div class="task-row-bottom">
+                                <span class="task-category-badge" style="background: rgba(0,0,0,0.15);">${cat.name}</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+            if (tasksHtml === '') tasksHtml = `<div class="empty-day">✨ Нет задач. Нажмите "➕" чтобы добавить</div>`;
+            
+            return `
+                <div class="day-card ${day.isToday ? 'today' : ''}" data-date="${day.dateKey}">
+                    <div class="day-header">
+                        <div class="day-name">
+                            <span class="day-weekday">${day.weekday}</span>
+                            <span class="day-date">${day.dateStr}</span>
+                        </div>
+                        <button class="round-add-btn" onclick="event.stopPropagation(); openAddTaskModal('${day.dateKey}')" title="Добавить задачу">➕</button>
+                    </div>
+                    <div class="tasks-list">
+                        ${tasksHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderWeek() {
+            let startOfWeek = getStartOfWeek(new Date(), currentWeekOffset);
+            let endOfWeek = new Date(startOfWeek);
+            endOfWeek.setDate(startOfWeek.getDate() + 6);
+            document.getElementById('intervalText').innerHTML = `📅 ${formatDate(startOfWeek)} — ${formatDate(endOfWeek)} (${startOfWeek.getFullYear()})`;
+
+            const todayDateKey = getDateKey(new Date());
+            const isMobile = window.innerWidth <= 768;
+            // На мобильных устройствах всегда вертикальный режим
+            let effectiveMode = isMobile ? 'vertical' : displayMode;
+            
+            // Соберём данные для всех 7 дней
+            let daysData = [];
+            for (let i = 0; i < 7; i++) {
+                let curr = new Date(startOfWeek);
+                curr.setDate(startOfWeek.getDate() + i);
+                let dateKey = getDateKey(curr);
+                let tasks = allTasks[dateKey]?.tasks || [];
+                tasks.sort((a,b) => {
+                    if (a.important && !b.important) return -1;
+                    if (!a.important && b.important) return 1;
+                    if (a.completed && !b.completed) return 1;
+                    if (!a.completed && b.completed) return -1;
+                    return (a.startTime || '00:00').localeCompare(b.startTime || '00:00');
+                });
+                daysData.push({
+                    date: curr,
+                    dateKey: dateKey,
+                    weekday: dayNamesFull[i],
+                    dateStr: `${curr.getDate()} ${curr.toLocaleString('ru', { month: 'short' })}`,
+                    isToday: (dateKey === todayDateKey),
+                    tasks: tasks
+                });
+            }
+
+            const container = document.getElementById('weekContainer');
+            
+            if (effectiveMode === 'vertical') {
+                let html = '<div class="vertical-list">';
+                for (let day of daysData) {
+                    html += renderDayCard(day);
+                }
+                html += '</div>';
+                container.innerHTML = html;
+            } 
+            else { // paired mode: три пары, воскресенье отсутствует
+                // Берём только первые 6 дней (ПН..СБ)
+                const pairedDays = daysData.slice(0, 6);
+                // Порядок вывода: ПН, ЧТ, ВТ, ПТ, СР, СБ (для сетки из двух колонок, чтобы пары оказались в одной строке)
+                // Индексы: 0-ПН, 3-ЧТ, 1-ВТ, 4-ПТ, 2-СР, 5-СБ
+                const orderedForGrid = [
+                    pairedDays[0], pairedDays[3],
+                    pairedDays[1], pairedDays[4],
+                    pairedDays[2], pairedDays[5]
+                ];
+                // Сетка 2 колонки: элементы идут построчно: первый в левую колонку первой строки, второй в правую первой строки, третий в левую второй строки и т.д.
+                let gridHtml = '<div class="pair-grid">';
+                for (let day of orderedForGrid) {
+                    gridHtml += renderDayCard(day);
+                }
+                gridHtml += '</div>';
+                container.innerHTML = gridHtml;
+            }
+        }
+
+        // Обёртка для вызова перерендера при изменениях
+        function rerender() { renderWeek(); }
+
+        // Модальные и CRUD методы
+        window.openAddTaskModal = function(dateKey) {
+            currentEditTask = { dateKey, taskId: null };
+            document.getElementById('taskModalTitle').innerHTML = '➕ Новая задача';
+            document.getElementById('taskTitle').value = '';
+            document.getElementById('taskStartTime').value = '';
+            document.getElementById('taskEndTime').value = '';
+            document.getElementById('taskImportant').checked = false;
+            populateCategorySelect();
+            document.getElementById('taskModal').classList.add('active');
+        };
+
+        window.openEditTaskModal = function(dateKey, taskId) {
+            let tasks = allTasks[dateKey]?.tasks || [];
+            let task = tasks.find(t => t.id === taskId);
+            if (!task) return;
+            currentEditTask = { dateKey, taskId };
+            document.getElementById('taskModalTitle').innerHTML = '✏️ Редактировать задачу';
+            document.getElementById('taskTitle').value = task.text;
+            document.getElementById('taskStartTime').value = task.startTime || '';
+            document.getElementById('taskEndTime').value = task.endTime || '';
+            document.getElementById('taskImportant').checked = task.important || false;
+            populateCategorySelect();
+            document.getElementById('taskCategory').value = task.category || 'work';
+            document.getElementById('taskModal').classList.add('active');
+        };
+
+        window.closeTaskModal = function() { document.getElementById('taskModal').classList.remove('active'); };
+
+        window.saveTask = function() {
+            let title = document.getElementById('taskTitle').value.trim();
+            if (!title) { alert('Введите название задачи'); return; }
+            let startTime = document.getElementById('taskStartTime').value;
+            let endTime = document.getElementById('taskEndTime').value;
+            let category = document.getElementById('taskCategory').value;
+            let important = document.getElementById('taskImportant').checked;
+
+            if (!allTasks[currentEditTask.dateKey]) allTasks[currentEditTask.dateKey] = { tasks: [] };
+            let taskData = {
+                text: title,
+                startTime: startTime || null,
+                endTime: endTime || null,
+                category: category,
+                important: important,
+                completed: false,
+                id: currentEditTask.taskId || generateTaskId()
+            };
+            if (currentEditTask.taskId) {
+                let idx = allTasks[currentEditTask.dateKey].tasks.findIndex(t => t.id === currentEditTask.taskId);
+                if (idx !== -1) allTasks[currentEditTask.dateKey].tasks[idx] = taskData;
+                else allTasks[currentEditTask.dateKey].tasks.push(taskData);
+            } else {
+                allTasks[currentEditTask.dateKey].tasks.push(taskData);
+            }
+            saveAllTasks();
+            closeTaskModal();
+            rerender();
+        };
+
+        window.toggleTaskComplete = function(dateKey, taskId, checked) {
+            let tasks = allTasks[dateKey]?.tasks || [];
+            let task = tasks.find(t => t.id === taskId);
+            if (task) {
+                task.completed = checked;
+                saveAllTasks();
+                rerender();
+            }
+        };
+
+        window.deleteTask = function(dateKey, taskId) {
+            let tasks = allTasks[dateKey]?.tasks || [];
+            let idx = tasks.findIndex(t => t.id === taskId);
+            if (idx !== -1) {
+                allTasks[dateKey].tasks.splice(idx, 1);
+                if (allTasks[dateKey].tasks.length === 0) delete allTasks[dateKey];
+                saveAllTasks();
+                rerender();
+            }
+        };
+
+        window.prevWeek = function() { currentWeekOffset--; rerender(); };
+        window.nextWeek = function() { currentWeekOffset++; rerender(); };
+        window.goToCurrentWeek = function() { currentWeekOffset = 0; rerender(); };
+    </script>
+</body>
+</html>

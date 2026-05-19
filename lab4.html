@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Покупки</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f2f4f8;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        .container {
+            max-width: 1200px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            padding: 25px 35px 35px 35px;
+            transition: all 0.2s;
+        }
+        h1 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: 600;
+            margin: 0 0 15px 0;
+            color: #1e2a3a;
+            letter-spacing: -0.3px;
+        }
+        .timer {
+            font-size: 28px;
+            text-align: center;
+            background: #eef2f7;
+            padding: 20px 15px;
+            border-radius: 28px;
+            margin-bottom: 30px;
+            font-weight: 500;
+            color: #1f3a4b;
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.02), 0 2px 5px rgba(0,0,0,0.05);
+        }
+        .timer span {
+            font-weight: 700;
+            background: white;
+            padding: 4px 12px;
+            border-radius: 40px;
+            margin: 0 4px;
+            display: inline-block;
+            min-width: 70px;
+            font-size: 28px;
+            color: #0b3b4f;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin: 20px 0;
+            font-size: 15px;
+            background: #fff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+        }
+        th, td {
+            border: 1px solid #d0d7de;
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+        }
+        th {
+            background-color: #e9edf2;
+            font-weight: 600;
+            font-size: 15px;
+        }
+        .bold {
+            font-weight: 700;
+            font-size: 17px;
+            margin-top: 20px;
+            margin-bottom: 5px;
+            color: #1e4663;
+        }
+        hr {
+            margin: 25px 0;
+            border: none;
+            height: 1px;
+            background: linear-gradient(to right, #ccc, transparent);
+        }
+        h3 {
+            font-size: 20px;
+            margin: 10px 0 12px 0;
+            font-weight: 500;
+            color: #2c3e66;
+        }
+        #output {
+            text-align: left;
+        }
+        .report-block {
+            line-height: 1.45;
+        }
+        @media (max-width: 680px) {
+            .container { padding: 20px; }
+            .timer { font-size: 22px; }
+            .timer span { font-size: 22px; min-width: 55px; }
+            th, td { padding: 6px 8px; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>ЛБ4</h1>
+
+    <div class="timer">
+        До конца <span id="year"></span> учебного года<br>
+        <span id="days">0</span> дней
+        <span id="hours">0</span> часов
+        <span id="minutes">0</span> минут
+        <span id="seconds">0</span> секунд
+    </div>
+
+    <div id="output"></div>
+</div>
+
+<script>
+const MyDataBase = [
+    [{"FIO": "Иванов Иван", "day": [13, "июль", 2000]}, ["пицца", "сок", "", "мандарины"], 800, undefined, 620, 350],
+    [["батон", "кефир", "печенье", "йогурт"], 60, 90, undefined, 250, {"FIO": "noname", "day": [5, "март", 1995]}],
+    [null, 25000, 5000, ["наушники", "пауэрбанк"]],
+    [["кроссовки", "футболка", "кепка"], {"FIO": "Петрова Мария", "day": [22, "декабрь", 1988]}, 4500, undefined, 1200],
+    [120000, 3000, undefined, 8000, {"FIO": "Сидоров Алексей", "day": [10, "сентябрь", 1992]}, ["телевизор", "пульт", "кабель", "саундбар"]],
+    [{"FIO": "noname", "day": [1, "январь", 2001]}, ["шоколад", "чипсы"], 180, undefined],
+    [["шампунь", "гель для душа", "зубная паста"], 350, 280, 150, {"FIO": "Козлова Елена", "day": [15, "август", 1990]}],
+    [1200, 3500, ["кружка", "чайник"], null],
+    [{"FIO": "Морозов Дмитрий", "day": [28, "февраль", 1985]}, 5500, 1200, undefined, 800, ["лыжи", "палки", "ботинки", "перчатки"]],
+    [["ручка", "блокнот", "маркер", "скотч", "ножницы"], {"FIO": "Волкова Анна", "day": [7, "ноябрь", 2002]}, 80, undefined, 150, 200, 350]
+];
+
+function isField1(item) {
+    if (item === null) return true;
+    if (typeof item === "object" && item !== null && !Array.isArray(item)) {
+        return item.hasOwnProperty("FIO") && item.hasOwnProperty("day");
+    }
+    return false;
+}
+
+function isField2(item) {
+    if (!Array.isArray(item)) return false;
+    if (item.length === 0) return true;
+    return typeof item[0] === "string";
+}
+
+function isField3Value(item) {
+    return (typeof item === "number") || (item === undefined);
+}
+
+function extractFields(client) {
+    let field1 = null, field2 = null, field3 = [];
+    for (let i = 0; i < client.length; i++) {
+        let item = client[i];
+        if (isField1(item)) {
+            field1 = item;
+        } else if (isField2(item)) {
+            field2 = item;
+        } else if (isField3Value(item)) {
+            field3.push(item);
+        }
+    }
+    return { field1: field1, field2: field2, field3: field3 };
+}
+
+function getReportHTML(data) {
+    // Покупатели
+    let validFIO = [];
+    let lostFIO = 0;
+    for (let i = 0; i < data.length; i++) {
+        let f1 = extractFields(data[i]).field1;
+        if (f1 === null) {
+            lostFIO++;
+        } else if (f1 && f1.FIO === "noname") {
+            lostFIO++;
+        } else if (f1 && f1.FIO) {
+            validFIO.push(f1.FIO);
+        }
+    }
+    validFIO.sort();
+    
+    // Товары
+    let allGoods = [];
+    for (let i = 0; i < data.length; i++) {
+        let f2 = extractFields(data[i]).field2;
+        if (f2 && Array.isArray(f2)) {
+            for (let j = 0; j < f2.length; j++) {
+                let good = f2[j];
+                if (good && good !== "") {
+                    allGoods.push(good);
+                }
+            }
+        }
+    }
+    
+    let goodsCount = {};
+    for (let i = 0; i < allGoods.length; i++) {
+        let good = allGoods[i];
+        if (goodsCount[good]) {
+            goodsCount[good]++;
+        } else {
+            goodsCount[good] = 1;
+        }
+    }
+    
+    let uniqueGoods = [];
+    for (let i = 0; i < allGoods.length; i++) {
+        if (uniqueGoods.indexOf(allGoods[i]) === -1) {
+            uniqueGoods.push(allGoods[i]);
+        }
+    }
+    uniqueGoods.sort();
+    
+    // Дополнительная информация
+    let allPrices = [];
+    let lostUndef = 0;
+    for (let i = 0; i < data.length; i++) {
+        let f3 = extractFields(data[i]).field3;
+        for (let j = 0; j < f3.length; j++) {
+            let val = f3[j];
+            if (typeof val === "number") {
+                allPrices.push(val);
+            }
+            if (val === undefined) {
+                lostUndef++;
+            }
+        }
+    }
+    
+    let maxPrice = 0;
+    for (let i = 0; i < allPrices.length; i++) {
+        if (allPrices[i] > maxPrice) {
+            maxPrice = allPrices[i];
+        }
+    }
+    
+    let html = "";
+    html += "<div class='bold'>Покупатели:</div>";
+    html += "<div>" + validFIO.join(", ") + "</div>";
+    html += "<div class='bold'>Кол-во покупателей с потерянным ФИО: " + lostFIO + "</div><br>";
+    
+    html += "<div class='bold'>Товары</div>";
+    html += "<table>";
+    html += "<thead><tr><th>№</th><th>Товар</th><th>Сколько раз куплен</th></tr></thead><tbody>";
+    for (let i = 0; i < uniqueGoods.length; i++) {
+        html += "<tr>";
+        html += "<td>" + (i + 1) + ".</td>";
+        html += "<td>" + uniqueGoods[i] + "</td>";
+        html += "<td>" + goodsCount[uniqueGoods[i]] + "</td>";
+        html += "</tr>";
+    }
+    html += "</tbody></table>";
+    html += "<div class='bold'>Всего уникальных товаров: " + uniqueGoods.length + "</div><br>";
+    
+    html += "<div class='bold'>Дополнительная информация:</div>";
+    html += "<div>Самая дорогая покупка: " + maxPrice + " руб.</div>";
+    html += "<div class='bold'>Дополнительная информация:</div>";
+    html += "<div>Общее количество покупок с потерянной стоимостью: " + lostUndef + "</div>";
+    
+    return html;
+}
+
+function copyJSON(arr) {
+    return JSON.parse(JSON.stringify(arr));
+}
+
+function copyManual(arr) {
+    if (!Array.isArray(arr)) {
+        return arr;
+    }
+    let result = [];
+    for (let i = 0; i < arr.length; i++) {
+        if (Array.isArray(arr[i])) {
+            result.push(copyManual(arr[i]));
+        } else if (typeof arr[i] === "object" && arr[i] !== null) {
+            let obj = {};
+            for (let key in arr[i]) {
+                if (arr[i].hasOwnProperty(key)) {
+                    obj[key] = copyManual(arr[i][key]);
+                }
+            }
+            result.push(obj);
+        } else {
+            result.push(arr[i]);
+        }
+    }
+    return result;
+}
+
+const obj1 = {
+    Data: copyJSON(MyDataBase),
+    outData: function() {
+        document.getElementById("output").innerHTML = getReportHTML(this.Data);
+    }
+};
+
+function Changes() {
+    this.Data = copyManual(MyDataBase);
+    this.changeData = function(arr) {
+        for (let i = 0; i < arr.length; i++) {
+            let client = arr[i];
+            let field2 = null;
+            let field3 = [];
+            
+            for (let j = 0; j < client.length; j++) {
+                let item = client[j];
+                if (isField2(item)) {
+                    field2 = item;
+                } else if (isField3Value(item)) {
+                    field3.push(item);
+                }
+            }
+            
+            if (field2 && Array.isArray(field2) && field2.length === field3.length) {
+                for (let k = 0; k < field2.length; k++) {
+                    if (typeof field3[k] === "number" && field3[k] > 1000 && field2[k] && typeof field2[k] === "string") {
+                        field2[k] = field2[k].toUpperCase();
+                    }
+                }
+            }
+        }
+    };
+}
+
+const obj2 = new Changes();
+
+
+const outputDiv = document.getElementById("output");
+
+obj1.outData();
+
+setTimeout(function() {
+    let div = document.createElement("div");
+    div.innerHTML = "<hr><h3>3.2) Отчёт на основе obj2.Data (вызван через obj1.outData):</h3>";
+    outputDiv.appendChild(div);
+    let tempDiv = document.createElement("div");
+    div.appendChild(tempDiv);
+    tempDiv.innerHTML = getReportHTML(obj2.Data);
+}, 100);
+
+setTimeout(function() {
+    obj2.changeData(obj1.Data);
+    let div = document.createElement("div");
+    div.innerHTML = "<hr><h3>3.3-3.4) После изменения obj1.Data через obj2.changeData():</h3>";
+    outputDiv.appendChild(div);
+    obj1.outData();
+}, 200);
+
+setTimeout(function() {
+    let div = document.createElement("div");
+    div.innerHTML = "<hr><h3>3.5) Данные obj2.Data (не изменились):</h3>";
+    outputDiv.appendChild(div);
+    let reportDiv = document.createElement("div");
+    reportDiv.innerHTML = getReportHTML(obj2.Data);
+    div.appendChild(reportDiv);
+}, 300);
+
+// ========== 5. ТАЙМЕР (до 30 июня) ==========
+function updateTimer() {
+    let now = new Date();
+    let year = now.getFullYear();
+    let target = new Date(year, 5, 30);
+    if (now > target) {
+        target = new Date(year + 1, 5, 30);
+    }
+    
+    let diff = target - now;
+    let seconds = Math.floor(diff / 1000) % 60;
+    let minutes = Math.floor(diff / (1000 * 60)) % 60;
+    let hours = Math.floor(diff / (1000 * 60 * 60)) % 24;
+    let days = Math.floor(diff / (1000 * 60 * 60 * 24));
+    
+    document.getElementById("year").textContent = target.getFullYear();
+    document.getElementById("days").textContent = days;
+    document.getElementById("hours").textContent = hours;
+    document.getElementById("minutes").textContent = minutes;
+    document.getElementById("seconds").textContent = seconds;
+}
+
+updateTimer();
+setInterval(updateTimer, 1000);
+</script>
+</body>
+</html>

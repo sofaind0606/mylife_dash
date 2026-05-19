@@ -1,0 +1,434 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LifeDashboard | Книги и фильмы</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        :root {
+            --color-primary: #93ABDB;
+            --color-primary-dark: #768FC2;
+            --color-primary-light: #C2D4F5;
+            --color-secondary: #FAF4CD;
+            --color-secondary-dark: #E6DFB3;
+            --color-secondary-light: #FFF9E6;
+            --color-accent: #5B6F9E;
+            --color-text: #3D4A66;
+            --color-text-light: #6B7C9E;
+            --color-text-muted: #A5B3CC;
+            --color-nav: #93ABDB;
+            --color-nav-light: #A6BCE8;
+            --color-border: #FAF4CD;
+            --color-border-light: #FFF4E0;
+            --color-bg: #FDFBF0;
+            --color-bg-alt: #FFFFFF;
+            --color-success: #6BCB77;
+            --color-warning: #FFD93D;
+            --color-danger: #E15554;
+            --shadow-sm: 0 2px 8px rgba(91, 111, 158, 0.05);
+            --shadow-md: 0 4px 15px rgba(91, 111, 158, 0.08);
+            --shadow-lg: 0 10px 30px rgba(91, 111, 158, 0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--color-bg); min-height: 100vh; color: var(--color-text); line-height: 1.5; }
+        .app-layout { display: flex; min-height: 100vh; position: relative; overflow-x: hidden; }
+        .burger-btn { display: none; position: fixed; top: 16px; left: 16px; z-index: 1003; width: 44px; height: 44px; background: var(--color-primary); border: none; border-radius: 50%; color: white; font-size: 1.6rem; cursor: pointer; box-shadow: var(--shadow-md); align-items: center; justify-content: center; }
+        .nav-frame { width: 18%; min-width: 220px; background: var(--color-primary); padding: 24px 16px; border-right: 2px solid var(--color-primary-dark); position: fixed; height: 100vh; overflow-y: auto; z-index: 100; box-shadow: 4px 0 20px rgba(62, 92, 102, 0.15); transition: transform 0.3s ease; }
+        .logo { margin-bottom: 16px; padding: 12px; border-bottom: 2px solid #ffffff; text-align: center; background: rgba(255, 255, 255, 0.1); border-radius: 12px; }
+        .logo h1 { color: #ffffff; font-size: 1.2rem; font-weight: 700; }
+        .logo p { color: var(--color-bg); font-size: 0.75rem; opacity: 0.9; }
+        .nav-section { margin-bottom: 20px; }
+        .nav-title { color: rgba(255,255,255,0.7); font-size: 0.85em; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; padding-left: 8px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; color: whitesmoke; text-decoration: none; border-radius: var(--radius-md); margin-bottom: 4px; transition: var(--transition); font-weight: 600; cursor: pointer; }
+        .nav-item:hover { background: var(--color-primary-dark); transform: translateX(4px); }
+        .nav-item.active { background: var(--color-accent); font-weight: 700; }
+        .content-area { flex: 1; margin-left: 18%; padding: 24px 32px; max-width: 1600px; width: 100%; }
+
+        .media-header { margin-bottom: 30px; }
+        .media-header h1 { font-size: 1.6em; font-weight: 700; color: var(--color-primary-dark); text-align: center; }
+
+        .fab-add {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            width: 56px;
+            height: 56px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2em;
+            font-weight: bold;
+            box-shadow: var(--shadow-lg);
+            z-index: 999;
+            border: none;
+            cursor: pointer;
+            color: white;
+            transition: var(--transition);
+        }
+        .fab-add:hover { transform: scale(1.05); }
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+        }
+        .tab-btn { padding: 10px 20px; background: var(--color-bg-alt); border: 2px solid var(--color-border); border-radius: var(--radius-lg); cursor: pointer; font-weight: 600; transition: var(--transition); white-space: nowrap; }
+        .tab-btn:hover { background: var(--color-primary-light); border-color: var(--color-primary); }
+        .tab-btn.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .status-filters { display: flex; gap: 10px; margin-bottom: 30px; flex-wrap: wrap; }
+        .status-filter-btn { padding: 8px 16px; background: var(--color-bg-alt); border: 2px solid var(--color-border-light); border-radius: var(--radius-md); cursor: pointer; font-weight: 500; transition: var(--transition); color: var(--color-text-light); }
+        .status-filter-btn:hover { border-color: var(--color-primary); color: var(--color-text); }
+        .status-filter-btn.active { background: var(--color-primary); color: white; border-color: var(--color-primary); }
+        .media-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 20px; }
+        .section-header { grid-column: 1 / -1; padding: 12px 16px; background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-bg-alt) 100%); border-radius: var(--radius-lg); border: 2px solid var(--color-border-light); margin-top: 20px; }
+        .section-header:first-child { margin-top: 0; }
+        .section-title { font-size: 1.1em; font-weight: 700; color: var(--color-text); display: flex; align-items: center; gap: 8px; }
+        .section-count { background: var(--color-primary); color: white; padding: 2px 10px; border-radius: 20px; font-size: 0.8em; font-weight: 600; }
+        .media-card { background: var(--color-bg-alt); border-radius: var(--radius-lg); border: 2px solid var(--color-border-light); overflow: hidden; transition: var(--transition); cursor: pointer; }
+        .media-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); border-color: var(--color-primary); }
+        .media-poster { width: 100%; height: 260px; object-fit: cover; background: linear-gradient(135deg, var(--color-primary-light) 0%, var(--color-secondary-light) 100%); display: flex; align-items: center; justify-content: center; font-size: 3.5em; color: var(--color-text-muted); }
+        .media-poster img { width: 100%; height: 100%; object-fit: cover; }
+        .media-info { padding: 12px; }
+        .media-title { font-weight: 700; font-size: 0.95em; color: var(--color-text); margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .media-meta { display: flex; justify-content: space-between; align-items: center; font-size: 0.75em; color: var(--color-text-light); }
+        .media-status { padding: 4px 10px; border-radius: 20px; font-size: 0.7em; font-weight: 600; }
+        .status-planned { background: rgba(147, 171, 219, 0.2); color: var(--color-primary-dark); }
+        .status-watching { background: rgba(255, 217, 61, 0.2); color: #b89d00; }
+        .status-completed { background: rgba(107, 203, 119, 0.2); color: var(--color-success); }
+        .media-rating .star { color: #F5A623; font-size: 1.2em; text-shadow: 0 0 1px rgba(0,0,0,0.1); }
+        .media-rating .star.empty { color: #A5B3CC; opacity: 1; }
+        .rating-star { cursor: pointer; color: #A5B3CC; font-size: 1.5em; transition: var(--transition); }
+        .rating-star:hover,
+        .rating-star.active { color: #F5A623; transform: scale(1.1); text-shadow: 0 0 2px rgba(245,166,35,0.4); }
+        .empty-state { grid-column: 1 / -1; text-align: center; padding: 40px; color: var(--color-text-muted); background: var(--color-primary-light); border: 2px dashed var(--color-border); border-radius: var(--radius-lg); }
+        .empty-state-icon { font-size: 3em; margin-bottom: 12px; }
+        .modal { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(62, 92, 102, 0.5); backdrop-filter: blur(5px); z-index: 1000; justify-content: center; align-items: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: var(--color-bg-alt); border-radius: var(--radius-xl); padding: 24px; width: 100%; max-width: 800px; border: 2px solid var(--color-border); box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 12px; border-bottom: 2px solid var(--color-border); }
+        .modal-header h3 { color: var(--color-primary); font-weight: 700; margin: 0; font-size: 1.2em; }
+        .close-modal { background: none; border: none; font-size: 1.4em; cursor: pointer; color: var(--color-primary); }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--color-primary-dark); font-size: 0.9em; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px 12px; background: var(--color-bg); border: 2px solid var(--color-border); border-radius: var(--radius-md); font-size: 0.95em; transition: var(--transition); }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px rgba(147,171,219,0.2); }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .poster-preview { width: 100%; max-width: 180px; height: 240px; margin: 12px auto; border-radius: var(--radius-md); background: var(--color-primary-light); display: flex; align-items: center; justify-content: center; overflow: hidden; border: 2px solid var(--color-border); }
+        .poster-preview .placeholder { font-size: 2.5em; color: var(--color-text-muted); }
+        .poster-preview img { width: 100%; height: 100%; object-fit: cover; }
+        .file-input-wrapper { position: relative; overflow: hidden; width: 100%; max-width: 180px; margin: 0 auto; display: block; }
+        .file-input-wrapper input[type=file] { position: absolute; left: 0; top: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+        .file-input-btn { display: block; width: 100%; padding: 10px; background: var(--color-bg); border: 2px dashed var(--color-border); border-radius: var(--radius-md); text-align: center; cursor: pointer; color: var(--color-text-light); transition: var(--transition); }
+        .file-input-btn:hover { border-color: var(--color-primary); background: var(--color-primary-light); }
+        .rating-section { background: var(--color-bg); padding: 16px; border-radius: var(--radius-md); margin-bottom: 16px; border: 1px solid var(--color-border-light); }
+        .rating-section-title { font-weight: 700; color: var(--color-text); margin-bottom: 12px; font-size: 0.95em; }
+        .rating-item { margin-bottom: 12px; }
+        .rating-label { font-size: 0.85em; color: var(--color-text-light); margin-bottom: 4px; }
+        .rating-input { display: flex; gap: 6px; font-size: 1.4em; margin-top: 6px; }
+        .modal-actions { display: flex; gap: 12px; margin-top: 20px; }
+        .save-btn, .delete-btn { flex: 1; padding: 12px; border: none; border-radius: var(--radius-md); font-weight: 700; cursor: pointer; transition: var(--transition); font-size: 0.95em; }
+        .save-btn { background: linear-gradient(135deg, var(--color-primary), var(--color-nav)); color: white; }
+        .delete-btn { background: var(--color-danger); color: white; }
+        .save-btn:hover, .delete-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
+        .hidden { display: none !important; }
+        
+        @media (max-width: 1024px) {
+            .app-layout { flex-direction: column; }
+            .nav-frame { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 12px 16px; border-right: none; border-bottom: 2px solid var(--color-primary); }
+            .nav-section { flex-direction: row; gap: 8px; }
+            .nav-title { display: none; }
+            .nav-item { padding: 8px 12px; font-size: 0.85em; }
+            .content-area { margin-left: 0; padding: 20px; }
+            .media-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+            .form-row { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 768px) {
+            .burger-btn { display: flex; }
+            .nav-frame { 
+                transform: translateX(-100%); 
+                width: 80%; 
+                max-width: 280px; 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                flex-direction: column; 
+                border-bottom: none; 
+                border-right: 2px solid var(--color-primary-dark); 
+                transition: transform 0.3s ease;
+                z-index: 1002;
+            }
+            .nav-frame.open { transform: translateX(0); }
+            .content-area { margin-left: 0; padding: 60px 16px 16px; }
+            .overlay { 
+                display: none; 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                height: 100%; 
+                background: rgba(0,0,0,0.4); 
+                z-index: 1001; 
+                transition: opacity 0.3s; 
+                pointer-events: none;
+            }
+            .overlay.active { 
+                display: block; 
+                pointer-events: auto;
+            }
+            .poster-preview, .file-input-wrapper { max-width: 140px; height: 200px; }
+            .fab-add { width: 50px; height: 50px; font-size: 1.8em; bottom: 20px; right: 20px; }
+        }
+        .overlay { display: none; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <button class="burger-btn" id="burgerBtn">☰</button>
+    <div class="overlay" id="overlay"></div>
+    <div class="app-layout">
+        <nav class="nav-frame" id="navFrame">
+            <div class="logo"><h1>📅 LifeDashboard</h1><p>Полный набор для продуктивности</p></div>
+            <div class="nav-section"><div class="nav-title">ГЛАВНОЕ</div><a href="index.html" class="nav-item">🏠 Главная</a><a href="day.html" class="nav-item">📆 План на день</a></div>
+            <div class="nav-section"><div class="nav-title">ПЛАНИРОВАНИЕ</div><a href="week.html" class="nav-item">📋 Неделя</a><a href="month.html" class="nav-item">🗓️ Месяц</a><a href="year.html" class="nav-item">🎯 Год</a></div>
+            <div class="nav-section"><div class="nav-title">ТРЕКЕРЫ</div><a href="habits.html" class="nav-item">🔥 Привычки</a><a href="finance.html" class="nav-item">💰 Финансы</a><a href="media.html" class="nav-item active">📚🎬 Книги и фильмы</a><a href="study.html" class="nav-item">📚 Учёба</a><a href="pomodoro.html" class="nav-item">🍅 Таймер помодоро</a></div>
+        </nav>
+        <div class="content-area">
+            <div class="media-header">
+                <h1>📚🎬 Книги и фильмы</h1>
+            </div>
+            <div class="tabs">
+                <button class="tab-btn active" onclick="switchTab('books')">📚 Книги</button>
+                <button class="tab-btn" onclick="switchTab('movies')">🎬 Фильмы</button>
+                <button class="tab-btn" onclick="switchTab('series')">📺 Сериалы</button>
+            </div>
+            <div class="status-filters">
+                <button class="status-filter-btn active" onclick="switchStatusFilter('all')">Все</button>
+                <button class="status-filter-btn" onclick="switchStatusFilter('planned')">📋 Запланировано</button>
+                <button class="status-filter-btn" onclick="switchStatusFilter('watching')" id="inProgressBtn">👀 В процессе</button>
+                <button class="status-filter-btn" onclick="switchStatusFilter('completed')">✅ Завершено</button>
+            </div>
+            <div class="media-grid" id="mediaGrid"></div>
+        </div>
+    </div>
+
+    <button class="fab-add" onclick="openAddModal()">+</button>
+
+    <div id="mediaModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header"><h3 id="modalTitle">➕ Добавить</h3><button class="close-modal" onclick="closeModal()">✖</button></div>
+            <input type="hidden" id="mediaType" value="books">
+            <div class="form-group"><label>Название</label><input type="text" id="mediaTitle" placeholder="Введите название..."></div>
+            <div class="form-group"><label id="authorLabel">✍️ Автор</label><input type="text" id="mediaAuthor" placeholder="Автор, режиссёр или создатель..."></div>
+            <div class="form-group"><label>Постер</label>
+                <div class="poster-preview" id="posterPreview"><span class="placeholder">🖼️</span></div>
+                <div class="file-input-wrapper"><div class="file-input-btn">📁 Загрузить постер</div><input type="file" id="mediaPoster" accept="image/*" onchange="handlePosterUpload(this)"></div>
+                <div class="poster-hint" style="font-size:0.75em; text-align:center; margin-top:6px;">Изображение будет сжато до ~400px</div>
+            </div>
+            <div id="bookFields" class="hidden">
+                <div class="form-row"><div class="form-group"><label>📖 Жанр</label><select id="bookGenre"><option value="">Выберите...</option><option value="fiction">Художественная</option><option value="fantasy">Фэнтези</option><option value="scifi">Научная фантастика</option><option value="mystery">Детектив</option><option value="romance">Романтика</option><option value="thriller">Триллер</option><option value="horror">Ужасы</option><option value="history">История</option><option value="biography">Биография</option><option value="selfhelp">Саморазвитие</option><option value="business">Бизнес</option><option value="science">Наука</option><option value="other">Другое</option></select></div>
+                <div class="form-group"><label>📅 Год</label><input type="number" id="bookYear" placeholder="2024"></div><div class="form-group"><label>📄 Страниц</label><input type="number" id="bookPages" placeholder="300"></div></div>
+                <div class="form-row"><div class="form-group"><label>📖 Дата начала</label><input type="date" id="bookReadStart"></div><div class="form-group"><label>✅ Дата окончания</label><input type="date" id="bookReadEnd"></div></div>
+                <div class="rating-section"><div class="rating-section-title">⭐ Оценки</div>
+                    <div class="rating-item"><div class="rating-label">📖 Сюжет</div><div class="rating-input" id="ratingPlot"></div></div>
+                    <div class="rating-item"><div class="rating-label">👥 Персонажи</div><div class="rating-input" id="ratingCharacters"></div></div>
+                    <div class="rating-item"><div class="rating-label">🌟 Атмосфера</div><div class="rating-input" id="ratingAtmosphere"></div></div>
+                </div>
+                <div class="form-row"><div class="form-group"><label>🏆 Лучший персонаж</label><input type="text" id="bookBestCharacter"></div><div class="form-group"><label>💀 Худший персонаж</label><input type="text" id="bookWorstCharacter"></div></div>
+                <div class="form-group"><label>📝 Сюжет (без спойлеров)</label><textarea id="bookPlot" rows="3"></textarea></div>
+                <div class="form-group"><label>💬 Любимые цитаты</label><textarea id="bookQuotes" rows="3"></textarea></div>
+            </div>
+            <div id="movieFields" class="hidden">
+                <div class="form-row"><div class="form-group"><label>🎬 Жанр</label><select id="movieGenre"><option value="">Выберите...</option><option value="action">Боевик</option><option value="comedy">Комедия</option><option value="drama">Драма</option><option value="horror">Ужасы</option><option value="scifi">Фантастика</option><option value="fantasy">Фэнтези</option><option value="thriller">Триллер</option><option value="romance">Романтика</option><option value="crime">Криминал</option><option value="documentary">Документальный</option><option value="animation">Анимация</option><option value="adventure">Приключения</option><option value="other">Другое</option></select></div>
+                <div class="form-group"><label>📅 Год</label><input type="number" id="movieYear" placeholder="2024"></div><div class="form-group"><label>📅 Дата просмотра</label><input type="date" id="movieWatchDate"></div></div>
+                <div class="rating-section"><div class="rating-section-title">⭐ Оценки</div>
+                    <div class="rating-item"><div class="rating-label">🎭 Актёры</div><div class="rating-input" id="ratingActors"></div></div>
+                    <div class="rating-item"><div class="rating-label">👥 Персонажи</div><div class="rating-input" id="ratingMovieCharacters"></div></div>
+                    <div class="rating-item"><div class="rating-label">📖 Сюжет</div><div class="rating-input" id="ratingMoviePlot"></div></div>
+                    <div class="rating-item"><div class="rating-label">💡 Оригинальность</div><div class="rating-input" id="ratingOriginality"></div></div>
+                </div>
+                <div class="form-row"><div class="form-group"><label>🏆 Лучший персонаж</label><input type="text" id="movieBestCharacter"></div><div class="form-group"><label>💀 Худший персонаж</label><input type="text" id="movieWorstCharacter"></div></div>
+                <div class="form-group"><label>📝 Сюжет</label><textarea id="moviePlot" rows="3"></textarea></div>
+                <div class="form-group"><label>🎬 Запомнившаяся сцена</label><textarea id="movieScene" rows="3"></textarea></div>
+                <div class="form-group"><label>💬 Любимая цитата</label><textarea id="movieQuotes" rows="3"></textarea></div>
+            </div>
+            <div id="seriesFields" class="hidden">
+                <div class="form-row"><div class="form-group"><label>📺 Жанр</label><select id="seriesGenre"><option value="">Выберите...</option><option value="action">Боевик</option><option value="comedy">Комедия</option><option value="drama">Драма</option><option value="horror">Ужасы</option><option value="scifi">Фантастика</option><option value="fantasy">Фэнтези</option><option value="thriller">Триллер</option><option value="romance">Романтика</option><option value="crime">Криминал</option><option value="documentary">Документальный</option><option value="animation">Анимация</option><option value="adventure">Приключения</option><option value="other">Другое</option></select></div>
+                <div class="form-group"><label>📅 Год</label><input type="number" id="seriesYear" placeholder="2024"></div><div class="form-group"><label>📺 Количество сезонов</label><input type="number" id="seriesSeasons" placeholder="3"></div></div>
+                <div class="form-group"><label>📅 Дата начала просмотра</label><input type="date" id="seriesWatchDate"></div>
+                <div class="form-group"><label>🌟 Любимый эпизод</label><input type="text" id="seriesFavoriteEpisode" placeholder="например, S02E05"></div>
+                <div class="rating-section"><div class="rating-section-title">⭐ Оценки</div>
+                    <div class="rating-item"><div class="rating-label">🎭 Актёры</div><div class="rating-input" id="ratingSeriesActors"></div></div>
+                    <div class="rating-item"><div class="rating-label">👥 Персонажи</div><div class="rating-input" id="ratingSeriesCharacters"></div></div>
+                    <div class="rating-item"><div class="rating-label">📖 Сюжет</div><div class="rating-input" id="ratingSeriesPlot"></div></div>
+                    <div class="rating-item"><div class="rating-label">💡 Оригинальность</div><div class="rating-input" id="ratingSeriesOriginality"></div></div>
+                </div>
+                <div class="form-row"><div class="form-group"><label>🏆 Лучший персонаж</label><input type="text" id="seriesBestCharacter"></div><div class="form-group"><label>💀 Худший персонаж</label><input type="text" id="seriesWorstCharacter"></div></div>
+                <div class="form-group"><label>📝 Сюжет</label><textarea id="seriesPlot" rows="3"></textarea></div>
+                <div class="form-group"><label>🎬 Запомнившаяся сцена</label><textarea id="seriesScene" rows="3"></textarea></div>
+                <div class="form-group"><label>💬 Любимая цитата</label><textarea id="seriesQuotes" rows="3"></textarea></div>
+            </div>
+            <div class="form-group"><label>Статус</label><select id="mediaStatus"><option value="planned">📋 Запланировано</option><option value="watching" id="inProgressOption">👀 В процессе</option><option value="completed">✅ Завершено</option></select></div>
+            <div class="form-group"><label>⭐ Общий рейтинг</label><div class="rating-input" id="ratingOverall"></div></div>
+            <div class="form-group"><label>📝 Заметки</label><textarea id="mediaNotes" rows="3"></textarea></div>
+            <div class="modal-actions"><button class="delete-btn hidden" id="deleteBtn" onclick="deleteMedia()">🗑️ Удалить</button><button class="save-btn" onclick="saveMedia()">💾 Сохранить</button></div>
+        </div>
+    </div>
+
+    <script>
+        let mediaData = JSON.parse(localStorage.getItem('mediaData')) || { items: [] };
+        if (!mediaData.items || mediaData.items.length === 0) {
+            mediaData.items = [
+                { id: 'demo1', type: 'books', title: 'Война и мир', author: 'Лев Толстой', status: 'completed', rating: 5, genre: 'fiction', year: 1869, pages: 1225, readStart: '2023-01-10', readEnd: '2023-03-15', bestCharacter: 'Андрей Болконский', worstCharacter: 'Анатоль Курагин', plot: 'Эпическое произведение о русском обществе в эпоху Наполеоновских войн.', quotes: '— Всё, всё кончено! — сказал он. — И слава богу!', bookRatings: { plot: 5, characters: 5, atmosphere: 5 } },
+                { id: 'demo2', type: 'movies', title: 'Побег из Шоушенка', author: 'Фрэнк Дарабонт', status: 'completed', rating: 5, genre: 'drama', year: 1994, watchDate: '2024-02-20', bestCharacter: 'Энди Дюфрейн', worstCharacter: 'Нортон', plot: 'Банкир, осуждённый за убийство жены, находит надежду в тюрьме.', scene: 'Сцена в дожде после побега.', quotes: 'Надежда — это хорошая вещь, хорошая вещь не умирает.', movieRatings: { actors: 5, characters: 5, plot: 5, originality: 5 } }
+            ];
+            localStorage.setItem('mediaData', JSON.stringify(mediaData));
+        }
+
+        let currentTab = 'books', currentStatusFilter = 'all', editingId = null, currentPosterData = null, currentRating = 0;
+        let bookRatings = { plot: 0, characters: 0, atmosphere: 0 };
+        let movieRatings = { actors: 0, characters: 0, plot: 0, originality: 0 };
+        let seriesRatings = { actors: 0, characters: 0, plot: 0, originality: 0 };
+        let firebaseReady = false, db = null, currentUser = null, useIndexedDB = false, mediaDB = null;
+        const firebaseConfig = { apiKey: "AIzaSyARKWwV3cggOhda9g6cDNcEAGOpUN4O63I", authDomain: "lifedashbord.firebaseapp.com", projectId: "lifedashbord", storageBucket: "lifedashbord.appspot.com", messagingSenderId: "206574362724", appId: "1:206574362724:web:83887cae4dc87b41137f71" };
+
+        function initIndexedDB() { return new Promise(resolve => { const req = indexedDB.open('MediaDB',1); req.onerror = () => { useIndexedDB=false; resolve(false); }; req.onsuccess = () => { mediaDB=req.result; useIndexedDB=true; resolve(true); }; req.onupgradeneeded = e => { if(!e.target.result.objectStoreNames.contains('posters')) e.target.result.createObjectStore('posters',{keyPath:'id'}); }; }); }
+        function savePosterToIndexedDB(id,poster) { return new Promise((resolve,reject) => { if(!useIndexedDB||!mediaDB) resolve(false); else { const tx=mediaDB.transaction(['posters'],'readwrite'), store=tx.objectStore('posters'), req=store.put({id,poster}); req.onsuccess=()=>resolve(true); req.onerror=()=>reject(); } }); }
+        function loadPosterFromIndexedDB(id) { return new Promise(resolve => { if(!useIndexedDB||!mediaDB) resolve(null); else { const tx=mediaDB.transaction(['posters'],'readonly'), store=tx.objectStore('posters'), req=store.get(id); req.onsuccess=()=>resolve(req.result?.poster||null); req.onerror=()=>resolve(null); } }); }
+        function deletePosterFromIndexedDB(id) { if(useIndexedDB&&mediaDB) mediaDB.transaction(['posters'],'readwrite').objectStore('posters').delete(id); }
+        function compressImage(file,maxW=400,maxH=600,q=0.7) { return new Promise((resolve,reject) => { const reader=new FileReader(); reader.readAsDataURL(file); reader.onload=e=>{ const img=new Image(); img.src=e.target.result; img.onload=()=>{ let w=img.width, h=img.height; if(w>maxW){ h=(maxW/w)*h; w=maxW; } if(h>maxH){ w=(maxH/h)*w; h=maxH; } const canvas=document.createElement('canvas'); canvas.width=w; canvas.height=h; const ctx=canvas.getContext('2d'); ctx.drawImage(img,0,0,w,h); resolve(canvas.toDataURL('image/jpeg',q)); }; img.onerror=reject; }; reader.onerror=reject; }); }
+        function generateId() { return 'id_'+Date.now()+'_'+Math.random().toString(36).substr(2,9); }
+        function escapeHtml(s) { if(!s) return ''; return s.replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+
+        function initFirebase() { try { if(typeof firebase==='undefined') return; if(!firebase.apps.length) firebase.initializeApp(firebaseConfig); db=firebase.firestore(); firebase.auth().onAuthStateChanged(user=>{ if(user){ currentUser=user; firebaseReady=true; loadMediaData(); } }); } catch(e){} }
+        function loadMediaData() { if(!currentUser||!db) { renderMedia(); return; } db.collection('users').doc(currentUser.uid).collection('media').doc('data').get().then(doc=>{ if(doc.exists && doc.data().items && doc.data().items.length>0 && JSON.stringify(mediaData)!==JSON.stringify(doc.data())) { mediaData=doc.data(); localStorage.setItem('mediaData',JSON.stringify(mediaData)); } renderMedia(); }); }
+        function saveMediaData() { localStorage.setItem('mediaData',JSON.stringify(mediaData)); if(firebaseReady&&currentUser&&db) db.collection('users').doc(currentUser.uid).collection('media').doc('data').set(mediaData); }
+
+        function switchTab(tab) { currentTab=tab; currentStatusFilter='all'; document.querySelectorAll('.tab-btn').forEach(btn=>btn.classList.remove('active')); event.target.classList.add('active'); document.querySelectorAll('.status-filter-btn').forEach(btn=>btn.classList.remove('active')); document.querySelector('.status-filter-btn[onclick="switchStatusFilter(\'all\')"]').classList.add('active'); updateLabels(); renderMedia(); }
+        function switchStatusFilter(status) { currentStatusFilter=status; document.querySelectorAll('.status-filter-btn').forEach(btn=>btn.classList.remove('active')); event.target.classList.add('active'); renderMedia(); }
+        function updateLabels() { const authorLabel=document.getElementById('authorLabel'), inProgressBtn=document.getElementById('inProgressBtn'), inProgressOption=document.getElementById('inProgressOption'); if(currentTab==='books') { authorLabel.textContent='✍️ Автор'; if(inProgressBtn) inProgressBtn.textContent='📖 Читаю'; if(inProgressOption) inProgressOption.textContent='📖 Читаю'; } else { authorLabel.textContent='🎬 Режиссёр / Создатель'; if(inProgressBtn) inProgressBtn.textContent='👀 Смотрю'; if(inProgressOption) inProgressOption.textContent='👀 Смотрю'; } }
+        function generateRatingStars(containerId, callback, initial=0) { const container=document.getElementById(containerId); if(!container) return; container.innerHTML=''; for(let i=1;i<=5;i++){ const star=document.createElement('span'); star.className='rating-star'; star.dataset.rating=i; star.textContent=i<=initial?'★':'☆'; if(i<=initial) star.classList.add('active'); star.onclick=(e)=>{ e.stopPropagation(); callback(i); }; container.appendChild(star); } }
+        function setupRatingStars() {
+            generateRatingStars('ratingOverall', val=>{ currentRating=val; updateRatingDisplay('ratingOverall'); });
+            generateRatingStars('ratingPlot', val=>{ bookRatings.plot=val; updateRatingDisplay('ratingPlot'); });
+            generateRatingStars('ratingCharacters', val=>{ bookRatings.characters=val; updateRatingDisplay('ratingCharacters'); });
+            generateRatingStars('ratingAtmosphere', val=>{ bookRatings.atmosphere=val; updateRatingDisplay('ratingAtmosphere'); });
+            generateRatingStars('ratingActors', val=>{ movieRatings.actors=val; updateRatingDisplay('ratingActors'); });
+            generateRatingStars('ratingMovieCharacters', val=>{ movieRatings.characters=val; updateRatingDisplay('ratingMovieCharacters'); });
+            generateRatingStars('ratingMoviePlot', val=>{ movieRatings.plot=val; updateRatingDisplay('ratingMoviePlot'); });
+            generateRatingStars('ratingOriginality', val=>{ movieRatings.originality=val; updateRatingDisplay('ratingOriginality'); });
+            generateRatingStars('ratingSeriesActors', val=>{ seriesRatings.actors=val; updateRatingDisplay('ratingSeriesActors'); });
+            generateRatingStars('ratingSeriesCharacters', val=>{ seriesRatings.characters=val; updateRatingDisplay('ratingSeriesCharacters'); });
+            generateRatingStars('ratingSeriesPlot', val=>{ seriesRatings.plot=val; updateRatingDisplay('ratingSeriesPlot'); });
+            generateRatingStars('ratingSeriesOriginality', val=>{ seriesRatings.originality=val; updateRatingDisplay('ratingSeriesOriginality'); });
+        }
+        function updateRatingDisplay(containerId) { const container=document.getElementById(containerId); if(!container) return; let val=0; if(containerId==='ratingOverall') val=currentRating; else if(containerId==='ratingPlot') val=bookRatings.plot; else if(containerId==='ratingCharacters') val=bookRatings.characters; else if(containerId==='ratingAtmosphere') val=bookRatings.atmosphere; else if(containerId==='ratingActors') val=movieRatings.actors; else if(containerId==='ratingMovieCharacters') val=movieRatings.characters; else if(containerId==='ratingMoviePlot') val=movieRatings.plot; else if(containerId==='ratingOriginality') val=movieRatings.originality; else if(containerId==='ratingSeriesActors') val=seriesRatings.actors; else if(containerId==='ratingSeriesCharacters') val=seriesRatings.characters; else if(containerId==='ratingSeriesPlot') val=seriesRatings.plot; else if(containerId==='ratingSeriesOriginality') val=seriesRatings.originality; else return; const stars=container.querySelectorAll('.rating-star'); stars.forEach((star,idx)=>{ if(idx<val) { star.textContent='★'; star.classList.add('active'); } else { star.textContent='☆'; star.classList.remove('active'); } }); }
+        function showHideFields() { const type=document.getElementById('mediaType').value; document.getElementById('bookFields').classList.toggle('hidden',type!=='books'); document.getElementById('movieFields').classList.toggle('hidden',type!=='movies'); document.getElementById('seriesFields').classList.toggle('hidden',type!=='series'); }
+        async function renderMedia() {
+            const grid=document.getElementById('mediaGrid'); grid.innerHTML='';
+            let items=mediaData.items.filter(i=>i.type===currentTab);
+            if(currentStatusFilter!=='all') items=items.filter(i=>i.status===currentStatusFilter);
+            if(items.length===0) { const icons={books:'📚',movies:'🎬',series:'📺'}; grid.innerHTML=`<div class="empty-state"><div class="empty-state-icon">${icons[currentTab]}</div><p>Нет записей</p><p>Нажмите «Добавить»!</p></div>`; return; }
+            const groups={planned:items.filter(i=>i.status==='planned'),watching:items.filter(i=>i.status==='watching'),completed:items.filter(i=>i.status==='completed')};
+            if(currentStatusFilter==='all') {
+                if(groups.planned.length) { grid.appendChild(createSectionHeader('📋 Запланировано',groups.planned.length)); for(let i of groups.planned) grid.appendChild(await createMediaCard(i)); }
+                if(groups.watching.length) { const label=currentTab==='books'?'📖 Читаю':'👀 Смотрю'; grid.appendChild(createSectionHeader(label,groups.watching.length)); for(let i of groups.watching) grid.appendChild(await createMediaCard(i)); }
+                if(groups.completed.length) { grid.appendChild(createSectionHeader('✅ Завершено',groups.completed.length)); for(let i of groups.completed) grid.appendChild(await createMediaCard(i)); }
+            } else { for(let i of items) grid.appendChild(await createMediaCard(i)); }
+        }
+        function createSectionHeader(title,count){ const div=document.createElement('div'); div.className='section-header'; div.innerHTML=`<div class="section-title">${title} <span class="section-count">${count}</span></div>`; return div; }
+        async function createMediaCard(item){
+            const card=document.createElement('div'); card.className='media-card'; card.onclick=()=>openEditModal(item.id);
+            let posterUrl=item.poster; if(!posterUrl&&useIndexedDB) posterUrl=await loadPosterFromIndexedDB(item.id);
+            let posterHtml='<div class="media-poster">'; if(posterUrl) posterHtml+='<img src="'+posterUrl+'" alt="'+escapeHtml(item.title)+'">'; else posterHtml+=(item.type==='books'?'📚':(item.type==='movies'?'🎬':'📺')); posterHtml+='</div>';
+            const statusLabels={planned:'Запланировано',watching:(currentTab==='books'?'Читаю':'Смотрю'),completed:'Завершено'}, statusClass={planned:'status-planned',watching:'status-watching',completed:'status-completed'};
+            let stars=''; for(let i=1;i<=5;i++) stars+=`<span class="star${i<=(item.rating||0)?'':' empty'}">${i<=(item.rating||0)?'★':'☆'}</span>`;
+            card.innerHTML=posterHtml+`<div class="media-info"><div class="media-title">${escapeHtml(item.title)}</div><div class="media-meta"><span class="media-status ${statusClass[item.status]}">${statusLabels[item.status]}</span><div class="media-rating">${stars}</div></div></div>`;
+            return card;
+        }
+        function resetForm() {
+            document.getElementById('mediaTitle').value=''; document.getElementById('mediaAuthor').value=''; document.getElementById('mediaStatus').value='planned'; document.getElementById('mediaNotes').value='';
+            document.getElementById('posterPreview').innerHTML='<span class="placeholder">🖼️</span>'; currentPosterData=null; currentRating=0;
+            bookRatings={plot:0,characters:0,atmosphere:0}; movieRatings={actors:0,characters:0,plot:0,originality:0}; seriesRatings={actors:0,characters:0,plot:0,originality:0};
+            updateRatingDisplay('ratingOverall'); updateRatingDisplay('ratingPlot'); updateRatingDisplay('ratingCharacters'); updateRatingDisplay('ratingAtmosphere');
+            updateRatingDisplay('ratingActors'); updateRatingDisplay('ratingMovieCharacters'); updateRatingDisplay('ratingMoviePlot'); updateRatingDisplay('ratingOriginality');
+            updateRatingDisplay('ratingSeriesActors'); updateRatingDisplay('ratingSeriesCharacters'); updateRatingDisplay('ratingSeriesPlot'); updateRatingDisplay('ratingSeriesOriginality');
+            ['bookGenre','bookYear','bookPages','bookReadStart','bookReadEnd','bookBestCharacter','bookWorstCharacter','bookPlot','bookQuotes','movieGenre','movieYear','movieWatchDate','movieBestCharacter','movieWorstCharacter','moviePlot','movieScene','movieQuotes','seriesGenre','seriesYear','seriesSeasons','seriesWatchDate','seriesFavoriteEpisode','seriesBestCharacter','seriesWorstCharacter','seriesPlot','seriesScene','seriesQuotes'].forEach(id=>{ const el=document.getElementById(id); if(el) el.value=''; });
+        }
+        window.openAddModal=function(){ editingId=null; resetForm(); document.getElementById('mediaType').value=currentTab; document.getElementById('modalTitle').innerHTML='➕ Добавить'; document.getElementById('deleteBtn').classList.add('hidden'); showHideFields(); updateLabels(); document.getElementById('mediaModal').classList.add('active'); };
+        window.openEditModal=async function(id){ const item=mediaData.items.find(i=>i.id===id); if(!item) return; editingId=id; currentPosterData=item.poster||null; if(!currentPosterData&&useIndexedDB) currentPosterData=await loadPosterFromIndexedDB(id);
+            currentRating=item.rating||0; document.getElementById('mediaType').value=item.type; document.getElementById('modalTitle').innerHTML='✏️ Редактировать'; document.getElementById('mediaTitle').value=item.title; document.getElementById('mediaAuthor').value=item.author||''; document.getElementById('mediaStatus').value=item.status; document.getElementById('mediaNotes').value=item.notes||'';
+            if(currentPosterData) document.getElementById('posterPreview').innerHTML='<img src="'+currentPosterData+'" alt="Постер">'; else document.getElementById('posterPreview').innerHTML='<span class="placeholder">🖼️</span>';
+            if(item.type==='books'){ document.getElementById('bookGenre').value=item.genre||''; document.getElementById('bookYear').value=item.year||''; document.getElementById('bookPages').value=item.pages||''; document.getElementById('bookReadStart').value=item.readStart||''; document.getElementById('bookReadEnd').value=item.readEnd||''; document.getElementById('bookBestCharacter').value=item.bestCharacter||''; document.getElementById('bookWorstCharacter').value=item.worstCharacter||''; document.getElementById('bookPlot').value=item.plot||''; document.getElementById('bookQuotes').value=item.quotes||''; bookRatings=item.bookRatings||{plot:0,characters:0,atmosphere:0}; updateRatingDisplay('ratingPlot'); updateRatingDisplay('ratingCharacters'); updateRatingDisplay('ratingAtmosphere'); }
+            else if(item.type==='movies'){ document.getElementById('movieGenre').value=item.genre||''; document.getElementById('movieYear').value=item.year||''; document.getElementById('movieWatchDate').value=item.watchDate||''; document.getElementById('movieBestCharacter').value=item.bestCharacter||''; document.getElementById('movieWorstCharacter').value=item.worstCharacter||''; document.getElementById('moviePlot').value=item.plot||''; document.getElementById('movieScene').value=item.scene||''; document.getElementById('movieQuotes').value=item.quotes||''; movieRatings=item.movieRatings||{actors:0,characters:0,plot:0,originality:0}; updateRatingDisplay('ratingActors'); updateRatingDisplay('ratingMovieCharacters'); updateRatingDisplay('ratingMoviePlot'); updateRatingDisplay('ratingOriginality'); }
+            else if(item.type==='series'){ document.getElementById('seriesGenre').value=item.genre||''; document.getElementById('seriesYear').value=item.year||''; document.getElementById('seriesSeasons').value=item.seasons||''; document.getElementById('seriesWatchDate').value=item.watchDate||''; document.getElementById('seriesFavoriteEpisode').value=item.favoriteEpisode||''; document.getElementById('seriesBestCharacter').value=item.bestCharacter||''; document.getElementById('seriesWorstCharacter').value=item.worstCharacter||''; document.getElementById('seriesPlot').value=item.plot||''; document.getElementById('seriesScene').value=item.scene||''; document.getElementById('seriesQuotes').value=item.quotes||''; seriesRatings=item.seriesRatings||{actors:0,characters:0,plot:0,originality:0}; updateRatingDisplay('ratingSeriesActors'); updateRatingDisplay('ratingSeriesCharacters'); updateRatingDisplay('ratingSeriesPlot'); updateRatingDisplay('ratingSeriesOriginality'); }
+            updateRatingDisplay('ratingOverall'); showHideFields(); updateLabels(); document.getElementById('deleteBtn').classList.remove('hidden'); document.getElementById('mediaModal').classList.add('active'); };
+        window.closeModal=function(){ document.getElementById('mediaModal').classList.remove('active'); };
+        window.handlePosterUpload=async function(input){ const file=input.files[0]; if(!file) return; try{ const compressed=await compressImage(file); currentPosterData=compressed; document.getElementById('posterPreview').innerHTML='<img src="'+compressed+'" alt="Постер">'; }catch(e){ alert('Ошибка загрузки изображения'); } input.value=''; };
+        window.saveMedia=async function(){ const type=document.getElementById('mediaType').value; const title=document.getElementById('mediaTitle').value.trim(); if(!title){ alert('Введите название'); return; }
+            const itemData={ id:editingId||generateId(), type, title, author:document.getElementById('mediaAuthor').value.trim()||null, status:document.getElementById('mediaStatus').value, rating:currentRating, notes:document.getElementById('mediaNotes').value.trim()||null, updatedAt:new Date().toISOString() };
+            if(!editingId) itemData.createdAt=new Date().toISOString();
+            if(type==='books'){ itemData.genre=document.getElementById('bookGenre').value||null; itemData.year=parseInt(document.getElementById('bookYear').value)||null; itemData.pages=parseInt(document.getElementById('bookPages').value)||null; itemData.readStart=document.getElementById('bookReadStart').value||null; itemData.readEnd=document.getElementById('bookReadEnd').value||null; itemData.bestCharacter=document.getElementById('bookBestCharacter').value.trim()||null; itemData.worstCharacter=document.getElementById('bookWorstCharacter').value.trim()||null; itemData.plot=document.getElementById('bookPlot').value.trim()||null; itemData.quotes=document.getElementById('bookQuotes').value.trim()||null; itemData.bookRatings={...bookRatings}; }
+            else if(type==='movies'){ itemData.genre=document.getElementById('movieGenre').value||null; itemData.year=parseInt(document.getElementById('movieYear').value)||null; itemData.watchDate=document.getElementById('movieWatchDate').value||null; itemData.bestCharacter=document.getElementById('movieBestCharacter').value.trim()||null; itemData.worstCharacter=document.getElementById('movieWorstCharacter').value.trim()||null; itemData.plot=document.getElementById('moviePlot').value.trim()||null; itemData.scene=document.getElementById('movieScene').value.trim()||null; itemData.quotes=document.getElementById('movieQuotes').value.trim()||null; itemData.movieRatings={...movieRatings}; }
+            else if(type==='series'){ itemData.genre=document.getElementById('seriesGenre').value||null; itemData.year=parseInt(document.getElementById('seriesYear').value)||null; itemData.seasons=parseInt(document.getElementById('seriesSeasons').value)||null; itemData.watchDate=document.getElementById('seriesWatchDate').value||null; itemData.favoriteEpisode=document.getElementById('seriesFavoriteEpisode').value.trim()||null; itemData.bestCharacter=document.getElementById('seriesBestCharacter').value.trim()||null; itemData.worstCharacter=document.getElementById('seriesWorstCharacter').value.trim()||null; itemData.plot=document.getElementById('seriesPlot').value.trim()||null; itemData.scene=document.getElementById('seriesScene').value.trim()||null; itemData.quotes=document.getElementById('seriesQuotes').value.trim()||null; itemData.seriesRatings={...seriesRatings}; }
+            if(editingId){ const idx=mediaData.items.findIndex(i=>i.id===editingId); if(idx!==-1) mediaData.items[idx]={...mediaData.items[idx],...itemData}; }
+            else mediaData.items.push(itemData);
+            if(currentPosterData) await savePosterToIndexedDB(itemData.id,currentPosterData);
+            saveMediaData(); renderMedia(); closeModal(); };
+        window.deleteMedia=async function(){ if(!editingId) return; if(!confirm('Удалить эту запись?')) return; mediaData.items=mediaData.items.filter(i=>i.id!==editingId); deletePosterFromIndexedDB(editingId); saveMediaData(); renderMedia(); closeModal(); };
+        document.addEventListener('DOMContentLoaded', async () => { 
+            await initIndexedDB(); 
+            initFirebase(); 
+            setupRatingStars(); 
+            updateLabels(); 
+            renderMedia(); 
+            const burger = document.getElementById('burgerBtn'), 
+                  nav = document.getElementById('navFrame'), 
+                  overlay = document.getElementById('overlay'); 
+            
+            // Открытие/закрытие меню
+            burger.addEventListener('click', (e) => { 
+                e.stopPropagation();
+                nav.classList.toggle('open'); 
+                overlay.classList.toggle('active'); 
+            });
+            
+            // Закрытие по клику на оверлей
+            overlay.addEventListener('click', () => { 
+                nav.classList.remove('open'); 
+                overlay.classList.remove('active'); 
+            });
+            
+            // Закрытие меню при клике на ссылку навигации (переход произойдёт стандартно)
+            document.querySelectorAll('.nav-item').forEach(link => {
+                link.addEventListener('click', () => {
+                    // Небольшая задержка, чтобы переход успел начаться
+                    setTimeout(() => {
+                        nav.classList.remove('open');
+                        overlay.classList.remove('active');
+                    }, 150);
+                });
+            });
+            
+            // Закрытие меню при клике вне его (на контент)
+            document.querySelector('.content-area')?.addEventListener('click', () => {
+                if (nav.classList.contains('open')) {
+                    nav.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

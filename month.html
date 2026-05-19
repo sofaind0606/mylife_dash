@@ -1,0 +1,977 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>LifeDashboard | Календарь месяца</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <style>
+        /* ========== КРЕМОВО-ГОЛУБАЯ ГАММА ========== */
+        :root {
+            --color-primary: #93ABDB;
+            --color-primary-dark: #768FC2;
+            --color-primary-light: #C2D4F5;
+            --color-secondary: #FAF4CD;
+            --color-secondary-dark: #E6DFB3;
+            --color-secondary-light: #FFF9E6;
+            --color-accent: #5B6F9E;
+            --color-text: #3D4A66;
+            --color-text-light: #6B7C9E;
+            --color-text-muted: #A5B3CC;
+            --color-bg: #FDFBF0;
+            --color-bg-alt: #FFFFFF;
+            --color-border: #FAF4CD;
+            --color-border-strong: #9BAEC9;
+            --color-success: #6BCB77;
+            --color-warning: #FFD93D;
+            --color-danger: #E15554;
+            --shadow-sm: 0 2px 8px rgba(91, 111, 158, 0.05);
+            --shadow-md: 0 4px 15px rgba(91, 111, 158, 0.08);
+            --shadow-lg: 0 10px 30px rgba(91, 111, 158, 0.12);
+            --radius-sm: 8px;
+            --radius-md: 12px;
+            --radius-lg: 16px;
+            --radius-xl: 20px;
+            --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--color-bg); min-height: 100vh; color: var(--color-text); line-height: 1.5; }
+
+        /* ========== НАВИГАЦИЯ ========== */
+        .app-layout { display: flex; min-height: 100vh; position: relative; }
+        .burger-btn { display: none; position: fixed; top: 16px; left: 16px; z-index: 1003; width: 44px; height: 44px; background: var(--color-primary); border: none; border-radius: 50%; color: white; font-size: 1.6rem; cursor: pointer; box-shadow: var(--shadow-md); align-items: center; justify-content: center; }
+        .nav-frame {
+            width: 18%; min-width: 220px; background: var(--color-primary); padding: 24px 16px; border-right: 2px solid var(--color-primary-dark);
+            position: fixed; height: 100vh; overflow-y: auto; z-index: 100; box-shadow: 4px 0 20px rgba(62, 92, 102, 0.15);
+            transition: transform 0.3s ease;
+        }
+        .logo { margin-bottom: 16px; padding: 12px; border-bottom: 2px solid #ffffff; text-align: center; background: rgba(255, 255, 255, 0.1); border-radius: 12px; }
+        .logo h1 { color: #ffffff; font-size: 1.2rem; font-weight: 700; }
+        .logo p { color: var(--color-bg); font-size: 0.75rem; opacity: 0.9; }
+        .nav-section { margin-bottom: 20px; }
+        .nav-title { color: rgba(255,255,255,0.7); font-size: 0.85em; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 8px; padding-left: 8px; }
+        .nav-item { display: flex; align-items: center; gap: 10px; padding: 12px 14px; color: whitesmoke; text-decoration: none; border-radius: var(--radius-md); margin-bottom: 4px; transition: var(--transition); font-weight: 600; }
+        .nav-item:hover { background: var(--color-primary-dark); transform: translateX(4px); }
+        .nav-item.active { background: var(--color-accent); font-weight: 700; }
+        .content-area { flex: 1; margin-left: 18%; padding: 24px 32px; max-width: 1600px; width: 100%; }
+
+        /* Общие карточки */
+        .card {
+            background: var(--color-bg-alt);
+            border-radius: var(--radius-lg);
+            padding: 30px;
+            box-shadow: var(--shadow-sm);
+            border: 2px solid var(--color-border);
+            transition: var(--transition);
+            margin-bottom: 30px;
+        }
+        .card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+        .card h2 {
+            color: var(--color-primary-dark);
+            font-weight: 700;
+            font-size: 1.6em;
+            margin: 0 0 24px 0;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--color-border);
+            text-align: center;
+        }
+
+        /* Навигация по месяцам – в одну строку */
+        .month-nav {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+        .month-nav button {
+            background: var(--color-secondary);
+            color: var(--color-text);
+            border: none;
+            padding: 8px 16px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: var(--transition);
+            flex-shrink: 0;
+        }
+        .month-nav button:hover {
+            background: var(--color-primary);
+            color: white;
+            transform: translateY(-2px);
+        }
+        #currentMonthYear {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--color-text);
+            flex-shrink: 0;
+            text-align: center;
+        }
+
+        /* Сетка календаря с горизонтальной прокруткой */
+        .calendar-wrapper {
+            overflow-x: auto;
+            margin-top: 20px;
+            border-radius: var(--radius-lg);
+        }
+        .month-calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(130px, 1fr));
+            gap: 10px;
+            min-width: 750px;
+        }
+        .month-day {
+            background: var(--color-bg-alt);
+            border-radius: var(--radius-md);
+            padding: 10px;
+            min-height: 130px;
+            cursor: pointer;
+            border: 2px solid var(--color-border-strong);
+            transition: all 0.2s;
+            position: relative;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+            display: flex;
+            flex-direction: column;
+        }
+        .month-day:hover {
+            transform: scale(1.02);
+            box-shadow: var(--shadow-md);
+            border-color: var(--color-primary);
+        }
+        .month-day.today { 
+            border: 3px solid var(--color-primary); 
+            background: #F8F9FF; 
+        }
+        .month-day.has-important {
+            border: 3px solid var(--color-warning) !important;
+            box-shadow: 0 4px 15px rgba(255, 217, 61, 0.3);
+            background: linear-gradient(135deg, #FFF9E6 0%, #FFFFFF 100%) !important;
+        }
+        .month-day.selected {
+            background: var(--color-primary-light);
+            border-color: var(--color-accent);
+            transform: scale(1.01);
+        }
+        .month-day-num {
+            font-weight: bold;
+            color: var(--color-text);
+            margin-bottom: 8px;
+            font-size: 1.1em;
+        }
+        .month-day-tasks {
+            font-size: 0.75em;
+            color: var(--color-text);
+            flex: 1;
+            overflow-y: auto;
+        }
+        .month-day-tasks div {
+            padding: 2px 0;
+            border-bottom: 1px dashed var(--color-border);
+            word-break: break-word;
+            white-space: normal;
+            line-height: 1.3;
+        }
+        .important-icon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            font-size: 1.1em;
+        }
+
+        /* Блок целей на месяц – голубоватый фон */
+        .goals-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+        .goal-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #E8F0FE;
+            border: 1px solid var(--color-border-strong);
+            border-radius: var(--radius-md);
+            padding: 12px 16px;
+            transition: var(--transition);
+        }
+        .goal-item:hover {
+            background: #D6E4F5;
+            transform: translateX(4px);
+        }
+        .goal-checkbox {
+            width: 22px;
+            height: 22px;
+            accent-color: var(--color-primary);
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+        .goal-content {
+            flex: 1;
+        }
+        .goal-title {
+            font-weight: 600;
+            font-size: 1rem;
+            color: var(--color-text);
+            word-break: break-word;
+        }
+        .goal-title.completed {
+            text-decoration: line-through;
+            opacity: 0.6;
+        }
+        .goal-actions {
+            display: flex;
+            gap: 8px;
+            flex-shrink: 0;
+        }
+        .goal-btn {
+            background: none;
+            border: none;
+            font-size: 1.2rem;
+            cursor: pointer;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+            transition: var(--transition);
+        }
+        .goal-btn.edit { color: var(--color-accent); }
+        .goal-btn.delete { color: var(--color-danger); }
+        .goal-btn:hover {
+            background: rgba(0,0,0,0.1);
+            transform: scale(1.05);
+        }
+        .add-goal-btn {
+            width: 100%;
+            padding: 12px;
+            background: var(--color-secondary);
+            border: 2px dashed var(--color-border);
+            border-radius: var(--radius-md);
+            font-weight: 600;
+            cursor: pointer;
+            color: var(--color-text);
+            transition: var(--transition);
+        }
+        .add-goal-btn:hover {
+            background: var(--color-primary-light);
+            transform: translateY(-2px);
+        }
+
+        /* Модальные окна */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(62, 92, 102, 0.5);
+            backdrop-filter: blur(5px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: var(--color-bg-alt);
+            border-radius: var(--radius-xl);
+            padding: 24px;
+            width: 100%;
+            max-width: 550px;
+            max-height: 90vh;
+            overflow-y: auto;
+            border: 2px solid var(--color-border);
+            box-shadow: var(--shadow-lg);
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid var(--color-border);
+        }
+        .modal-header h3 { color: var(--color-primary); font-weight: 700; margin: 0; }
+        .close-modal {
+            background: none;
+            border: none;
+            font-size: 1.6em;
+            cursor: pointer;
+            color: var(--color-primary);
+        }
+        .form-group { margin-bottom: 16px; }
+        .form-group label { display: block; margin-bottom: 6px; font-weight: 600; color: var(--color-primary-dark); }
+        .form-group input, .form-group select, .form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            background: var(--color-bg);
+            border: 2px solid var(--color-border);
+            border-radius: var(--radius-md);
+            font-size: 0.95rem;
+        }
+        .time-row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .time-row input { flex: 1; }
+        .save-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+            color: white;
+            border: none;
+            border-radius: var(--radius-md);
+            font-weight: 700;
+            cursor: pointer;
+            transition: var(--transition);
+        }
+        .save-btn:hover { transform: translateY(-2px); }
+
+        /* Секция добавления задачи – контрастная */
+        .add-task-section {
+            background: var(--color-secondary-light);
+            padding: 18px;
+            border-radius: var(--radius-lg);
+            border: 2px solid var(--color-border-strong);
+            box-shadow: inset 0 1px 2px rgba(0,0,0,0.02), 0 2px 4px rgba(0,0,0,0.02);
+            margin-bottom: 24px;
+        }
+
+        /* Список задач в модалке дня с цветом категории */
+        .day-task-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            border-radius: var(--radius-md);
+            margin-bottom: 8px;
+            border: 1px solid var(--color-border);
+            transition: var(--transition);
+            background: var(--color-bg-alt);
+        }
+        .day-task-item:hover { transform: translateX(4px); filter: brightness(0.97); }
+        .day-task-checkbox { width: 20px; height: 20px; accent-color: var(--color-primary); cursor: pointer; flex-shrink: 0; }
+        .day-task-content { flex: 1; }
+        .day-task-title { font-weight: 600; font-size: 0.95rem; }
+        .day-task-time { font-size: 0.7em; color: var(--color-text-light); margin-top: 2px; }
+        .day-task-title.completed { text-decoration: line-through; opacity: 0.6; }
+        .day-task-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .day-task-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 1.1em;
+            padding: 4px 8px;
+            border-radius: var(--radius-sm);
+        }
+        .day-task-btn.edit { color: var(--color-accent); }
+        .day-task-btn.delete { color: var(--color-danger); }
+        .day-task-btn:hover { background: rgba(0,0,0,0.1); transform: scale(1.05); }
+        .empty-state {
+            text-align: center;
+            padding: 20px;
+            color: var(--color-text-light);
+            background: var(--color-primary-light);
+            border-radius: var(--radius-md);
+        }
+
+        /* Адаптивность */
+        @media (max-width: 1024px) {
+            .app-layout { flex-direction: column; }
+            .nav-frame { width: 100%; height: auto; position: relative; flex-direction: row; flex-wrap: wrap; padding: 12px 16px; border-right: none; border-bottom: 2px solid var(--color-primary); }
+            .nav-section { flex-direction: row; gap: 8px; }
+            .nav-title { display: none; }
+            .nav-item { padding: 8px 12px; font-size: 0.85em; }
+            .content-area { margin-left: 0; padding: 20px; }
+            .month-calendar-grid { min-width: 700px; }
+        }
+        @media (max-width: 768px) {
+            .burger-btn { display: flex; }
+            .nav-frame { 
+                transform: translateX(-100%); 
+                width: 80%; 
+                max-width: 280px; 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                flex-direction: column; 
+                border-bottom: none; 
+                border-right: 2px solid var(--color-primary-dark);
+                transition: transform 0.3s ease;
+                z-index: 1002;
+            }
+            .nav-frame.open { transform: translateX(0); }
+            .content-area { margin-left: 0; padding: 60px 16px 16px; }
+            .overlay { 
+                display: none; 
+                position: fixed; 
+                top: 0; 
+                left: 0; 
+                width: 100%; 
+                height: 100%; 
+                background: rgba(0,0,0,0.4); 
+                z-index: 1001; 
+                transition: opacity 0.3s; 
+                pointer-events: none;
+            }
+            .overlay.active { 
+                display: block; 
+                pointer-events: auto;
+            }
+            /* Уменьшаем навигацию по месяцам, чтобы помещалась в одну строку */
+            .month-nav {
+                gap: 6px;
+                justify-content: center;
+            }
+            .month-nav button {
+                padding: 4px 8px;
+                font-size: 0.7em;
+            }
+            #currentMonthYear {
+                font-size: 0.85em;
+            }
+            .month-calendar-grid { gap: 6px; min-width: 650px; }
+            .month-day { min-height: 100px; padding: 6px; }
+            .month-day-num { font-size: 0.9em; }
+            .month-day-tasks { font-size: 0.65em; }
+            .card { padding: 16px; }
+            .add-task-section { padding: 12px; }
+        }
+        .overlay { display: none; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <button class="burger-btn" id="burgerBtn">☰</button>
+    <div class="overlay" id="overlay"></div>
+    <div class="app-layout">
+        <nav class="nav-frame" id="navFrame">
+            <div class="logo"><h1>📅 LifeDashboard</h1><p>Полный набор для продуктивности</p></div>
+            <div class="nav-section"><div class="nav-title">ГЛАВНОЕ</div><a href="index.html" class="nav-item">🏠 Главная</a><a href="day.html" class="nav-item">📆 План на день</a></div>
+            <div class="nav-section"><div class="nav-title">ПЛАНИРОВАНИЕ</div><a href="week.html" class="nav-item">📋 Неделя</a><a href="month.html" class="nav-item active">🗓️ Месяц</a><a href="year.html" class="nav-item">🎯 Год</a></div>
+            <div class="nav-section"><div class="nav-title">ТРЕКЕРЫ</div><a href="habits.html" class="nav-item">🔥 Привычки</a><a href="finance.html" class="nav-item">💰 Финансы</a><a href="media.html" class="nav-item">📚🎬 Книги и фильмы</a><a href="study.html" class="nav-item">📚 Учёба</a><a href="pomodoro.html" class="nav-item">🍅 Таймер помодоро</a></div>
+        </nav>
+        <div class="content-area">
+            <div class="card">
+                <h2>🗓️ Календарь месяца</h2>
+                <div class="month-nav">
+                    <button onclick="prevMonth()">◀ Предыдущий</button>
+                    <span id="currentMonthYear"></span>
+                    <button onclick="nextMonth()">Следующий ▶</button>
+                </div>
+                <div class="calendar-wrapper">
+                    <div class="month-calendar-grid" id="monthCalendarGrid"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🎯 Цели на месяц</h2>
+                <div id="goalsList" class="goals-list"></div>
+                <button class="add-goal-btn" onclick="openGoalModal()">➕ Добавить цель на месяц</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для задач дня -->
+    <div id="dayTaskModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="dayTaskModalTitle">📅 Задачи дня</h3>
+                <button class="close-modal" onclick="closeDayTaskModal()">✖</button>
+            </div>
+            <div class="add-task-section">
+                <div class="form-group">
+                    <label>Новая задача</label>
+                    <input type="text" id="newTaskTitle" placeholder="Что нужно сделать?">
+                </div>
+                <div class="form-group">
+                    <label>Время (необязательно)</label>
+                    <div class="time-row">
+                        <input type="time" id="newTaskStartTime">
+                        <span class="time-separator">—</span>
+                        <input type="time" id="newTaskEndTime">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Категория</label>
+                    <select id="newTaskCategory"></select>
+                </div>
+                <div class="form-group">
+                    <label style="display:flex; align-items:center; gap:8px;">
+                        <input type="checkbox" id="newTaskImportant" style="width:18px;height:18px;">
+                        <span>⭐ Важная задача</span>
+                    </label>
+                </div>
+                <button class="save-btn" onclick="addNewTask()">➕ Добавить</button>
+            </div>
+            <h4 style="margin:0 0 12px 0; color:var(--color-primary);">📋 Задачи на этот день</h4>
+            <div id="dayTaskListContent"></div>
+            <div style="margin-top:20px; text-align:center;">
+                <button onclick="closeDayTaskModal()" style="background:var(--color-bg); border:2px solid var(--color-border); border-radius:var(--radius-md); padding:8px 16px; cursor:pointer; font-weight:600;">Закрыть</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для целей -->
+    <div id="goalModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="goalModalTitle">🎯 Добавить цель</h3>
+                <button class="close-modal" onclick="closeGoalModal()">✖</button>
+            </div>
+            <div class="form-group">
+                <label>Название цели</label>
+                <input type="text" id="goalTitleInput" placeholder="Например: Выучить новый язык">
+            </div>
+            <button class="save-btn" onclick="saveGoal()">💾 Сохранить</button>
+        </div>
+    </div>
+
+    <script>
+        // ---------- Данные и Firebase ----------
+        let currentMonth = new Date().getMonth();
+        let currentYear = new Date().getFullYear();
+        let allTasks = JSON.parse(localStorage.getItem('allTasks')) || {};
+        let monthGoals = JSON.parse(localStorage.getItem('monthGoals')) || {};
+        let taskCategories = JSON.parse(localStorage.getItem('taskCategories')) || [
+            { id: 'other', name: 'Без категории', color: '#E6E1D7' }
+        ];
+        let firebaseReady = false;
+        let db = null;
+        let currentUser = null;
+        let selectedDateForModal = null;
+        let editingGoalId = null;
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyARKWwV3cggOhda9g6cDNcEAGOpUN4O63I",
+            authDomain: "lifedashbord.firebaseapp.com",
+            projectId: "lifedashbord",
+            storageBucket: "lifedashbord.appspot.com",
+            messagingSenderId: "206574362724",
+            appId: "1:206574362724:web:83887cae4dc87b41137f71"
+        };
+
+        document.addEventListener('DOMContentLoaded', function() {
+            initFirebase();
+            renderMonthCalendar();
+            renderGoals();
+            populateCategorySelect();
+
+            const burger = document.getElementById('burgerBtn');
+            const nav = document.getElementById('navFrame');
+            const overlay = document.getElementById('overlay');
+            
+            if (burger) burger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                nav.classList.toggle('open');
+                overlay.classList.toggle('active');
+            });
+            
+            if (overlay) overlay.addEventListener('click', () => {
+                nav.classList.remove('open');
+                overlay.classList.remove('active');
+            });
+            
+            document.querySelectorAll('.nav-item').forEach(link => {
+                link.addEventListener('click', () => {
+                    setTimeout(() => {
+                        nav.classList.remove('open');
+                        overlay.classList.remove('active');
+                    }, 150);
+                });
+            });
+            
+            document.querySelector('.content-area')?.addEventListener('click', () => {
+                if (nav.classList.contains('open')) {
+                    nav.classList.remove('open');
+                    overlay.classList.remove('active');
+                }
+            });
+        });
+
+        // ---------- Firebase ----------
+        function initFirebase() {
+            let timeout = setTimeout(() => { firebaseReady = false; }, 5000);
+            try {
+                if (typeof firebase === 'undefined') { clearTimeout(timeout); return; }
+                if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+                db = firebase.firestore();
+                firebase.auth().onAuthStateChanged(user => {
+                    clearTimeout(timeout);
+                    if (user) {
+                        currentUser = user;
+                        firebaseReady = true;
+                        loadTasksData();
+                        loadGoalsData();
+                        loadCategoriesData();
+                    } else { firebaseReady = false; }
+                });
+            } catch(e) { clearTimeout(timeout); firebaseReady = false; }
+        }
+
+        function loadTasksData() {
+            if (!currentUser || !db) return;
+            db.collection('users').doc(currentUser.uid).collection('tasks').get().then(snap => {
+                let loaded = {};
+                snap.forEach(doc => { loaded[doc.id] = doc.data(); });
+                if (JSON.stringify(allTasks) !== JSON.stringify(loaded)) {
+                    allTasks = loaded;
+                    localStorage.setItem('allTasks', JSON.stringify(allTasks));
+                    renderMonthCalendar();
+                }
+            });
+        }
+
+        function loadGoalsData() {
+            if (!currentUser || !db) return;
+            db.collection('users').doc(currentUser.uid).collection('monthGoals').get().then(snap => {
+                let loaded = {};
+                snap.forEach(doc => { loaded[doc.id] = doc.data(); });
+                if (JSON.stringify(monthGoals) !== JSON.stringify(loaded)) {
+                    monthGoals = loaded;
+                    localStorage.setItem('monthGoals', JSON.stringify(monthGoals));
+                    renderGoals();
+                }
+            });
+        }
+
+        function loadCategoriesData() {
+            if (!currentUser || !db) return;
+            db.collection('users').doc(currentUser.uid).collection('settings').doc('taskCategories').get().then(doc => {
+                if (doc.exists && doc.data().categories) {
+                    taskCategories = doc.data().categories;
+                    localStorage.setItem('taskCategories', JSON.stringify(taskCategories));
+                    populateCategorySelect();
+                }
+            });
+        }
+
+        function saveTasksData() {
+            localStorage.setItem('allTasks', JSON.stringify(allTasks));
+            if (firebaseReady && currentUser && db) {
+                Object.keys(allTasks).forEach(dateKey => {
+                    db.collection('users').doc(currentUser.uid).collection('tasks').doc(dateKey).set(allTasks[dateKey]);
+                });
+            }
+        }
+
+        function saveGoalsData() {
+            localStorage.setItem('monthGoals', JSON.stringify(monthGoals));
+            if (firebaseReady && currentUser && db) {
+                Object.keys(monthGoals).forEach(goalId => {
+                    db.collection('users').doc(currentUser.uid).collection('monthGoals').doc(goalId).set(monthGoals[goalId]);
+                });
+                let existingIds = Object.keys(monthGoals);
+                db.collection('users').doc(currentUser.uid).collection('monthGoals').get().then(snap => {
+                    snap.forEach(doc => {
+                        if (!existingIds.includes(doc.id)) doc.ref.delete();
+                    });
+                });
+            }
+        }
+
+        function getDateKey(date) { return date.toISOString().split('T')[0]; }
+        function escapeHtml(s) { if (!s) return ''; return s.replace(/[&<>]/g, m => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[m])); }
+        function formatTimeRange(start, end) { if (!start && !end) return ''; if (start && !end) return start; if (!start && end) return '— ' + end; return start + ' — ' + end; }
+        function generateTaskId() { return 'task_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
+        function generateGoalId() { return 'goal_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9); }
+
+        function populateCategorySelect() {
+            const select = document.getElementById('newTaskCategory');
+            if (!select) return;
+            select.innerHTML = '';
+            taskCategories.forEach(cat => {
+                const opt = document.createElement('option');
+                opt.value = cat.id;
+                opt.textContent = cat.name;
+                select.appendChild(opt);
+            });
+        }
+
+        // ---------- Календарь (показываем ТОЛЬКО важные задачи) ----------
+        function renderMonthCalendar() {
+            let firstDay = new Date(currentYear, currentMonth, 1);
+            let startDay = firstDay.getDay();
+            let daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+            document.getElementById('currentMonthYear').textContent = firstDay.toLocaleString('ru-RU', { month: 'long', year: 'numeric' });
+
+            let grid = document.getElementById('monthCalendarGrid');
+            grid.innerHTML = '';
+            ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'].forEach(d => {
+                let h = document.createElement('div');
+                h.textContent = d;
+                h.style.fontWeight = 'bold';
+                h.style.color = 'var(--color-text-light)';
+                h.style.fontSize = '0.8em';
+                h.style.textAlign = 'center';
+                h.style.padding = '8px';
+                grid.appendChild(h);
+            });
+
+            let startOffset = (startDay === 0 ? 6 : startDay - 1);
+            for (let i = 0; i < startOffset; i++) {
+                let e = document.createElement('div');
+                e.className = 'month-day';
+                e.style.opacity = '0.3';
+                grid.appendChild(e);
+            }
+
+            let today = new Date();
+            for (let d = 1; d <= daysInMonth; d++) {
+                let dateStr = currentYear + '-' + String(currentMonth + 1).padStart(2, '0') + '-' + String(d).padStart(2, '0');
+                let tasks = allTasks[dateStr]?.tasks || [];
+                let importantTasks = tasks.filter(t => t.important && !t.completed);
+                let hasImportant = importantTasks.length > 0;
+
+                let tasksList = importantTasks.slice(0, 3).map(t => {
+                    let time = formatTimeRange(t.startTime, t.endTime);
+                    let icon = '⭐ ';
+                    return '<div>' + icon + escapeHtml(t.text) + (time ? ' (' + time + ')' : '') + '</div>';
+                });
+
+                let isToday = today.getFullYear() === currentYear && today.getMonth() === currentMonth && today.getDate() === d;
+                let dayDiv = document.createElement('div');
+                dayDiv.className = 'month-day';
+                if (isToday) dayDiv.classList.add('today');
+                if (hasImportant) dayDiv.classList.add('has-important');
+                let importantIcon = hasImportant ? '<div class="important-icon">⭐</div>' : '';
+                let tasksHtml = tasksList.length > 0 ? '<div class="month-day-tasks">' + tasksList.join('') + '</div>' : '<div class="month-day-tasks" style="color:var(--color-text-muted);">—</div>';
+                dayDiv.innerHTML = importantIcon + '<div class="month-day-num">' + d + '</div>' + tasksHtml;
+                dayDiv.onclick = (function(date) { return function() {
+                    document.querySelectorAll('.month-day').forEach(el => el.classList.remove('selected'));
+                    dayDiv.classList.add('selected');
+                    openDayModal(date);
+                }; })(dateStr);
+                grid.appendChild(dayDiv);
+            }
+        }
+
+        // ---------- Модальное окно дня (здесь показываем ВСЕ задачи с цветом категорий) ----------
+        function openDayModal(dateStr) {
+            selectedDateForModal = dateStr;
+            document.getElementById('dayTaskModalTitle').textContent = '📅 Задачи на ' + dateStr;
+            document.getElementById('newTaskTitle').value = '';
+            document.getElementById('newTaskStartTime').value = '';
+            document.getElementById('newTaskEndTime').value = '';
+            document.getElementById('newTaskImportant').checked = false;
+            populateCategorySelect();
+            renderDayTaskList();
+            document.getElementById('dayTaskModal').classList.add('active');
+        }
+
+        function closeDayTaskModal() {
+            document.getElementById('dayTaskModal').classList.remove('active');
+            selectedDateForModal = null;
+        }
+
+        function renderDayTaskList() {
+            let container = document.getElementById('dayTaskListContent');
+            let tasks = (selectedDateForModal && allTasks[selectedDateForModal]?.tasks) || [];
+            if (tasks.length === 0) {
+                container.innerHTML = '<div class="empty-state">✨ Нет задач на этот день. Добавьте выше!</div>';
+                return;
+            }
+            tasks.sort((a, b) => {
+                if (a.important && !b.important) return -1;
+                if (!a.important && b.important) return 1;
+                if (a.completed && !b.completed) return 1;
+                if (!a.completed && b.completed) return -1;
+                return (a.startTime || '00:00').localeCompare(b.startTime || '00:00');
+            });
+            let html = '';
+            tasks.forEach((task, idx) => {
+                let cat = taskCategories.find(c => c.id === task.category) || taskCategories[0];
+                let catColor = cat.color;
+                let timeRange = formatTimeRange(task.startTime, task.endTime);
+                let completedClass = task.completed ? 'completed' : '';
+                let timeHtml = timeRange ? `<div class="day-task-time">⏰ ${timeRange}</div>` : '';
+                let importantIcon = task.important ? '⭐ ' : '';
+                html += `
+                    <div class="day-task-item" style="background: ${catColor}40; border-left: 4px solid ${catColor};">
+                        <input type="checkbox" class="day-task-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTaskInDayModal(${idx}, this.checked)">
+                        <div class="day-task-content">
+                            <div class="day-task-title ${completedClass}">${importantIcon}${escapeHtml(task.text)}</div>
+                            ${timeHtml}
+                        </div>
+                        <div class="day-task-actions">
+                            <button class="day-task-btn edit" onclick="editTaskInDayModal(${idx})">✏️</button>
+                            <button class="day-task-btn delete" onclick="deleteTaskInDayModal(${idx})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        window.addNewTask = function() {
+            let title = document.getElementById('newTaskTitle').value.trim();
+            if (!title) { alert('Введите название задачи'); return; }
+            let startTime = document.getElementById('newTaskStartTime').value;
+            let endTime = document.getElementById('newTaskEndTime').value;
+            let important = document.getElementById('newTaskImportant').checked;
+            let category = document.getElementById('newTaskCategory').value;
+
+            if (!allTasks[selectedDateForModal]) allTasks[selectedDateForModal] = { tasks: [] };
+            allTasks[selectedDateForModal].tasks.push({
+                id: generateTaskId(),
+                text: title,
+                startTime: startTime || null,
+                endTime: endTime || null,
+                important: important,
+                category: category,
+                completed: false
+            });
+            saveTasksData();
+            renderDayTaskList();
+            renderMonthCalendar();
+            document.getElementById('newTaskTitle').value = '';
+            document.getElementById('newTaskStartTime').value = '';
+            document.getElementById('newTaskEndTime').value = '';
+            document.getElementById('newTaskImportant').checked = false;
+        };
+
+        window.toggleTaskInDayModal = function(idx, completed) {
+            let tasks = allTasks[selectedDateForModal]?.tasks;
+            if (!tasks || !tasks[idx]) return;
+            tasks[idx].completed = completed;
+            saveTasksData();
+            renderDayTaskList();
+            renderMonthCalendar();
+        };
+
+        window.deleteTaskInDayModal = function(idx) {
+            let tasks = allTasks[selectedDateForModal]?.tasks;
+            if (!tasks || !tasks[idx]) return;
+            tasks.splice(idx, 1);
+            if (tasks.length === 0) delete allTasks[selectedDateForModal];
+            saveTasksData();
+            renderDayTaskList();
+            renderMonthCalendar();
+        };
+
+        window.editTaskInDayModal = function(idx) {
+            let tasks = allTasks[selectedDateForModal]?.tasks;
+            if (!tasks || !tasks[idx]) return;
+            let task = tasks[idx];
+            document.getElementById('newTaskTitle').value = task.text;
+            document.getElementById('newTaskStartTime').value = task.startTime || '';
+            document.getElementById('newTaskEndTime').value = task.endTime || '';
+            document.getElementById('newTaskImportant').checked = task.important || false;
+            document.getElementById('newTaskCategory').value = task.category || 'other';
+            tasks.splice(idx, 1);
+            if (tasks.length === 0) delete allTasks[selectedDateForModal];
+            saveTasksData();
+            renderDayTaskList();
+            renderMonthCalendar();
+        };
+
+        // ---------- Цели на месяц ----------
+        function renderGoals() {
+            const container = document.getElementById('goalsList');
+            const currentMonthKey = `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
+            const goals = monthGoals[currentMonthKey] || [];
+            if (goals.length === 0) {
+                container.innerHTML = '<div class="empty-state">🎯 Нет целей на этот месяц. Добавьте первую!</div>';
+                return;
+            }
+            let html = '';
+            goals.forEach((goal, idx) => {
+                html += `
+                    <div class="goal-item">
+                        <input type="checkbox" class="goal-checkbox" ${goal.completed ? 'checked' : ''} onchange="toggleGoal(${idx}, this.checked)">
+                        <div class="goal-content">
+                            <div class="goal-title ${goal.completed ? 'completed' : ''}">${escapeHtml(goal.text)}</div>
+                        </div>
+                        <div class="goal-actions">
+                            <button class="goal-btn edit" onclick="editGoal(${idx})">✏️</button>
+                            <button class="goal-btn delete" onclick="deleteGoal(${idx})">🗑️</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        }
+
+        function getCurrentMonthKey() {
+            return `${currentYear}-${String(currentMonth+1).padStart(2,'0')}`;
+        }
+
+        function saveGoalToStorage(goals) {
+            const key = getCurrentMonthKey();
+            monthGoals[key] = goals;
+            saveGoalsData();
+            renderGoals();
+        }
+
+        window.openGoalModal = function(goalId = null, text = '') {
+            editingGoalId = goalId;
+            document.getElementById('goalTitleInput').value = text;
+            document.getElementById('goalModalTitle').innerHTML = goalId ? '✏️ Редактировать цель' : '🎯 Новая цель';
+            document.getElementById('goalModal').classList.add('active');
+        };
+
+        window.closeGoalModal = function() {
+            document.getElementById('goalModal').classList.remove('active');
+            editingGoalId = null;
+        };
+
+        window.saveGoal = function() {
+            let title = document.getElementById('goalTitleInput').value.trim();
+            if (!title) { alert('Введите текст цели'); return; }
+            const key = getCurrentMonthKey();
+            let goals = monthGoals[key] || [];
+            if (editingGoalId !== null) {
+                const idx = goals.findIndex(g => g.id === editingGoalId);
+                if (idx !== -1) {
+                    goals[idx].text = title;
+                }
+            } else {
+                goals.push({
+                    id: generateGoalId(),
+                    text: title,
+                    completed: false
+                });
+            }
+            saveGoalToStorage(goals);
+            closeGoalModal();
+        };
+
+        window.toggleGoal = function(idx, completed) {
+            const key = getCurrentMonthKey();
+            let goals = monthGoals[key] || [];
+            if (goals[idx]) {
+                goals[idx].completed = completed;
+                saveGoalToStorage(goals);
+            }
+        };
+
+        window.editGoal = function(idx) {
+            const key = getCurrentMonthKey();
+            let goals = monthGoals[key] || [];
+            if (goals[idx]) {
+                openGoalModal(goals[idx].id, goals[idx].text);
+            }
+        };
+
+        window.deleteGoal = function(idx) {
+            const key = getCurrentMonthKey();
+            let goals = monthGoals[key] || [];
+            goals.splice(idx, 1);
+            saveGoalToStorage(goals);
+        };
+
+        // Навигация по месяцам
+        window.prevMonth = function() {
+            currentMonth--;
+            if (currentMonth < 0) { currentMonth = 11; currentYear--; }
+            renderMonthCalendar();
+            renderGoals();
+        };
+        window.nextMonth = function() {
+            currentMonth++;
+            if (currentMonth > 11) { currentMonth = 0; currentYear++; }
+            renderMonthCalendar();
+            renderGoals();
+        };
+    </script>
+</body>
+</html>
