@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
@@ -62,17 +62,13 @@
         .study-header {
             display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; flex-wrap: wrap; gap: 12px;
         }
-        .study-header h1 {
-            font-size: 1.6em; font-weight: 700; color: var(--color-primary-dark);
+        .study-header h1 { font-size: 1.6em; font-weight: 700; color: var(--color-primary-dark); }
+        .add-subject-btn {
+            padding: 10px 20px; background: linear-gradient(135deg, var(--color-primary), var(--color-nav));
+            color: white; border: none; border-radius: var(--radius-lg); font-weight: 600;
+            cursor: pointer; transition: var(--transition); display: flex; align-items: center; gap: 8px;
         }
-        .settings-icon-btn {
-            background: none; border: none; font-size: 1.5rem; cursor: pointer;
-            color: var(--color-primary-dark); transition: var(--transition); padding: 8px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-        }
-        .settings-icon-btn:hover {
-            background: var(--color-primary-light); transform: rotate(15deg);
-        }
+        .add-subject-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
 
         .tab-navigation {
             display: flex; gap: 12px; margin-bottom: 25px; border-bottom: 2px solid var(--color-border-light); padding-bottom: 8px;
@@ -112,19 +108,23 @@
         .pending-full-header { margin-bottom: 20px; }
         .pending-full-title { font-size: 1.2em; font-weight: 700; color: var(--color-text); }
 
+        /* Задачи с цветом сложности – фон всей строки */
         .task-item {
             display: flex; align-items: center; gap: 12px; padding: 12px 16px;
-            border-radius: var(--radius-md); margin-bottom: 10px; background: var(--color-bg-alt);
+            border-radius: var(--radius-md); margin-bottom: 10px;
             border: 1px solid var(--color-border-light); transition: var(--transition);
         }
         .task-item:hover { transform: translateX(4px); box-shadow: var(--shadow-sm); }
-        .task-checkbox { width: 18px; height: 18px; accent-color: var(--color-primary); cursor: pointer; }
+        .task-checkbox { width: 18px; height: 18px; accent-color: var(--color-primary); cursor: pointer; flex-shrink: 0; }
         .task-content { flex: 1; }
         .task-title { font-weight: 600; color: var(--color-text); }
         .task-title.completed { text-decoration: line-through; opacity: 0.6; }
         .task-meta { font-size: 0.75em; color: var(--color-text-light); margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
         .task-deadline { background: var(--color-primary-light); padding: 2px 8px; border-radius: 12px; }
         .task-subject { background: var(--color-secondary-light); padding: 2px 8px; border-radius: 12px; }
+        .task-difficulty-badge {
+            background: rgba(0,0,0,0.1); padding: 2px 8px; border-radius: 12px; font-size: 0.7em;
+        }
         .delete-task-btn { background: var(--color-danger); color: white; border: none; border-radius: var(--radius-sm); padding: 4px 10px; cursor: pointer; font-size: 0.75em; transition: var(--transition); }
         .delete-task-btn:hover { background: #c0392b; transform: scale(1.05); }
 
@@ -136,8 +136,8 @@
         /* Плавающая кнопка добавления задачи (справа снизу) */
         .fab-add-task {
             position: fixed; bottom: 30px; right: 30px; width: 56px; height: 56px;
-            background: linear-gradient(135deg, var(--color-primary), var(--color-nav)); color: white;
-            border: none; border-radius: 50%; font-size: 1.8em; cursor: pointer;
+            background: linear-gradient(135deg, var(--color-primary), var(--color-nav));
+            color: white; border: none; border-radius: 50%; font-size: 1.8em; cursor: pointer;
             box-shadow: var(--shadow-lg); transition: var(--transition); display: flex;
             align-items: center; justify-content: center; z-index: 200;
         }
@@ -151,7 +151,7 @@
         .modal.active { display: flex; }
         .modal-content {
             background: var(--color-bg-alt); border-radius: var(--radius-xl); padding: 24px;
-            width: 100%; max-width: 500px; border: 2px solid var(--color-border); box-shadow: var(--shadow-lg);
+            width: 100%; max-width: 550px; border: 2px solid var(--color-border); box-shadow: var(--shadow-lg);
             max-height: 90vh; overflow-y: auto;
         }
         .modal-header {
@@ -169,8 +169,8 @@
         }
         .save-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow-md); }
         .empty-state {
-            text-align: center; padding: 40px; color: var(--color-text-muted);
-            background: var(--color-primary-light); border-radius: var(--radius-lg); border: 2px dashed var(--color-border);
+            text-align: center; padding: 20px; color: var(--color-text-light);
+            background: var(--color-primary-light); border-radius: var(--radius-md);
         }
 
         @media (max-width: 1024px) {
@@ -183,37 +183,11 @@
         }
         @media (max-width: 768px) {
             .burger-btn { display: flex; }
-            .nav-frame { 
-                transform: translateX(-100%); 
-                width: 80%; 
-                max-width: 280px; 
-                position: fixed; 
-                top: 0; 
-                left: 0; 
-                flex-direction: column; 
-                border-bottom: none; 
-                border-right: 2px solid var(--color-primary-dark);
-                transition: transform 0.3s ease;
-                z-index: 1002;
-            }
+            .nav-frame { transform: translateX(-100%); width: 80%; max-width: 280px; position: fixed; top: 0; left: 0; flex-direction: column; border-bottom: none; border-right: 2px solid var(--color-primary-dark); transition: transform 0.3s ease; z-index: 1002; }
             .nav-frame.open { transform: translateX(0); }
             .content-area { margin-left: 0; padding: 60px 16px 16px; }
-            .overlay { 
-                display: none; 
-                position: fixed; 
-                top: 0; 
-                left: 0; 
-                width: 100%; 
-                height: 100%; 
-                background: rgba(0,0,0,0.4); 
-                z-index: 1001; 
-                transition: opacity 0.3s; 
-                pointer-events: none;
-            }
-            .overlay.active { 
-                display: block; 
-                pointer-events: auto;
-            }
+            .overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.4); z-index: 1001; transition: opacity 0.3s; pointer-events: none; }
+            .overlay.active { display: block; pointer-events: auto; }
             .subjects-grid { grid-template-columns: 1fr; }
             .fab-add-task { width: 50px; height: 50px; font-size: 1.5em; bottom: 20px; right: 20px; }
         }
@@ -233,7 +207,7 @@
         <div class="content-area">
             <div class="study-header">
                 <h1>📚 Трекер учёбы</h1>
-                <button class="settings-icon-btn" onclick="openSubjectModal()" title="Добавить предмет">⚙️</button>
+                <button class="add-subject-btn" onclick="openSubjectModal()"><span>➕</span><span>Добавить предмет</span></button>
             </div>
 
             <div class="tab-navigation">
@@ -241,16 +215,12 @@
                 <button class="tab-btn" data-tab="pending" onclick="switchTab('pending')">📋 Все задачи</button>
             </div>
 
-            <!-- Сетка предметов -->
             <div id="subjectsContainer" class="subjects-grid"></div>
-
-            <!-- Вкладка "Все задачи" -->
             <div id="pendingContainer" class="pending-full-list" style="display: none;">
                 <div class="pending-full-header"><div class="pending-full-title">📋 Все невыполненные задачи</div></div>
                 <div id="globalPendingTasksList"></div>
             </div>
 
-            <!-- Раздел задач внутри предмета -->
             <div id="tasksSection" style="display:none;">
                 <div class="tasks-header">
                     <div class="tasks-title" id="subjectTitle"></div>
@@ -261,7 +231,7 @@
         </div>
     </div>
 
-    <!-- Единая плавающая кнопка добавления задачи (справа снизу) -->
+    <!-- Плавающая кнопка добавления задачи (справа снизу) -->
     <button class="fab-add-task" onclick="handleFabClick()">+</button>
 
     <!-- Модальное окно для добавления/редактирования предмета -->
@@ -287,7 +257,7 @@
         </div>
     </div>
 
-    <!-- Модальное окно для задачи (внутри предмета – без выбора предмета) -->
+    <!-- Модальное окно для задачи ВНУТРИ ПРЕДМЕТА (без выбора предмета, но со сложностью) -->
     <div id="taskInsideModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -302,11 +272,19 @@
                 <label>Дедлайн (необязательно)</label>
                 <input type="date" id="taskInsideDeadline">
             </div>
+            <div class="form-group">
+                <label>Сложность</label>
+                <select id="taskInsideDifficulty">
+                    <option value="low">🟢 Низкая</option>
+                    <option value="medium">🟡 Средняя</option>
+                    <option value="high">🔴 Высокая</option>
+                </select>
+            </div>
             <button class="save-btn" onclick="saveTaskInside()">💾 Сохранить</button>
         </div>
     </div>
 
-    <!-- Модальное окно для глобальной задачи (с выбором предмета) -->
+    <!-- Модальное окно для глобальной задачи (с выбором предмета и сложностью) -->
     <div id="globalTaskModal" class="modal">
         <div class="modal-content">
             <div class="modal-header">
@@ -324,6 +302,14 @@
             <div class="form-group">
                 <label>Дедлайн (необязательно)</label>
                 <input type="date" id="globalTaskDeadline">
+            </div>
+            <div class="form-group">
+                <label>Сложность</label>
+                <select id="globalTaskDifficulty">
+                    <option value="low">🟢 Низкая</option>
+                    <option value="medium">🟡 Средняя</option>
+                    <option value="high">🔴 Высокая</option>
+                </select>
             </div>
             <button class="save-btn" onclick="saveGlobalTask()">💾 Сохранить</button>
         </div>
@@ -346,7 +332,13 @@
             appId: "1:206574362724:web:83887cae4dc87b41137f71"
         };
 
-        // ---------- Инициализация ----------
+        // Цвета для сложности (пастельные, гармонируют с гаммой)
+        const difficultyColors = {
+            low: '#E0F0E5',   // мягкий зелёный
+            medium: '#FDF5D6', // кремово-жёлтый
+            high: '#FDE0E0'    // бледно-розовый
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             initFirebase();
             renderAll();
@@ -354,21 +346,8 @@
             const burger = document.getElementById('burgerBtn');
             const nav = document.getElementById('navFrame');
             const overlay = document.getElementById('overlay');
-            
-            // Открытие/закрытие меню
-            burger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                nav.classList.toggle('open');
-                overlay.classList.toggle('active');
-            });
-            
-            // Закрытие по клику на оверлей
-            overlay.addEventListener('click', () => {
-                nav.classList.remove('open');
-                overlay.classList.remove('active');
-            });
-            
-            // Закрытие меню при клике на ссылку навигации (переход произойдёт стандартно)
+            burger.addEventListener('click', () => { nav.classList.toggle('open'); overlay.classList.toggle('active'); });
+            overlay.addEventListener('click', () => { nav.classList.remove('open'); overlay.classList.remove('active'); });
             document.querySelectorAll('.nav-item').forEach(link => {
                 link.addEventListener('click', () => {
                     setTimeout(() => {
@@ -376,14 +355,6 @@
                         overlay.classList.remove('active');
                     }, 150);
                 });
-            });
-            
-            // Закрытие меню при клике на контент
-            document.querySelector('.content-area')?.addEventListener('click', () => {
-                if (nav.classList.contains('open')) {
-                    nav.classList.remove('open');
-                    overlay.classList.remove('active');
-                }
             });
         });
 
@@ -433,7 +404,7 @@
         function renderSubjects() {
             const container = document.getElementById('subjectsContainer');
             if (!studyData.subjects?.length) {
-                container.innerHTML = '<div class="empty-state"><p>Пока нет предметов. Нажмите ⚙️ вверху справа!</p></div>';
+                container.innerHTML = '<div class="empty-state"><p>Пока нет предметов. Нажмите "Добавить предмет"!</p></div>';
                 return;
             }
             container.innerHTML = '';
@@ -476,16 +447,21 @@
             }
             container.innerHTML = '';
             allTasks.forEach(task => {
+                const bgColor = difficultyColors[task.difficulty] || difficultyColors.low;
+                const deadlineHtml = task.deadline ? `<span class="task-deadline">📅 ${formatDate(task.deadline)}</span>` : '';
+                const difficultyText = { low: 'Низкая', medium: 'Средняя', high: 'Высокая' }[task.difficulty] || 'Низкая';
                 const item = document.createElement('div');
                 item.className = 'task-item';
-                const deadlineHtml = task.deadline ? `<span class="task-deadline">📅 ${formatDate(task.deadline)}</span>` : '';
+                item.style.backgroundColor = bgColor;
+                item.style.opacity = task.completed ? '0.7' : '1';
                 item.innerHTML = `
-                    <input type="checkbox" class="task-checkbox" onchange="toggleGlobalTaskStatus('${task.id}', '${task.subjectId}', this.checked)">
+                    <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleGlobalTaskStatus('${task.id}', '${task.subjectId}', this.checked)">
                     <div class="task-content">
-                        <div class="task-title">${escapeHtml(task.title)}</div>
+                        <div class="task-title ${task.completed ? 'completed' : ''}">${escapeHtml(task.title)}</div>
                         <div class="task-meta">
                             <span class="task-subject">📘 ${escapeHtml(task.subjectName)}</span>
                             ${deadlineHtml}
+                            <span class="task-difficulty-badge">${difficultyText}</span>
                         </div>
                     </div>
                     <button class="delete-task-btn" onclick="event.stopPropagation(); deleteGlobalTask('${task.id}', '${task.subjectId}')">✖</button>
@@ -542,15 +518,21 @@
             });
             container.innerHTML = '';
             sorted.forEach(task => {
+                const bgColor = difficultyColors[task.difficulty] || difficultyColors.low;
+                const deadlineHtml = task.deadline ? `<span class="task-deadline">📅 ${formatDate(task.deadline)}</span>` : '';
+                const difficultyText = { low: 'Низкая', medium: 'Средняя', high: 'Высокая' }[task.difficulty] || 'Низкая';
                 const item = document.createElement('div');
                 item.className = 'task-item';
-                const deadlineHtml = task.deadline ? `<span class="task-deadline">📅 ${formatDate(task.deadline)}</span>` : '';
-                const completedClass = task.completed ? 'completed' : '';
+                item.style.backgroundColor = bgColor;
+                item.style.opacity = task.completed ? '0.7' : '1';
                 item.innerHTML = `
                     <input type="checkbox" class="task-checkbox" ${task.completed ? 'checked' : ''} onchange="toggleTaskStatus('${task.id}', this.checked)">
                     <div class="task-content">
-                        <div class="task-title ${completedClass}">${escapeHtml(task.title)}</div>
-                        <div class="task-meta">${deadlineHtml}</div>
+                        <div class="task-title ${task.completed ? 'completed' : ''}">${escapeHtml(task.title)}</div>
+                        <div class="task-meta">
+                            ${deadlineHtml}
+                            <span class="task-difficulty-badge">${difficultyText}</span>
+                        </div>
                     </div>
                     <button class="delete-task-btn" onclick="event.stopPropagation(); deleteTask('${task.id}')">✖</button>
                 `;
@@ -571,12 +553,14 @@
                 document.getElementById('taskInsideModalTitle').innerHTML = '➕ Новая задача';
                 document.getElementById('taskInsideTitle').value = '';
                 document.getElementById('taskInsideDeadline').value = '';
+                document.getElementById('taskInsideDifficulty').value = 'low';
                 document.getElementById('taskInsideModal').classList.add('active');
             } else {
                 // На главном экране – открываем модалку с выбором предмета
                 populateSubjectSelect();
                 document.getElementById('globalTaskTitle').value = '';
                 document.getElementById('globalTaskDeadline').value = '';
+                document.getElementById('globalTaskDifficulty').value = 'low';
                 window._editingGlobalTask = null;
                 document.getElementById('globalTaskModal').classList.add('active');
             }
@@ -591,17 +575,20 @@
             if (!subject) return;
             if (!subject.tasks) subject.tasks = [];
             const deadline = document.getElementById('taskInsideDeadline').value;
+            const difficulty = document.getElementById('taskInsideDifficulty').value;
             if (editingTaskId) {
                 const task = subject.tasks.find(t => t.id === editingTaskId);
                 if (task) {
                     task.title = title;
                     task.deadline = deadline || null;
+                    task.difficulty = difficulty;
                 }
             } else {
                 subject.tasks.push({
                     id: generateId(),
                     title: title,
                     deadline: deadline || null,
+                    difficulty: difficulty,
                     completed: false,
                     createdAt: new Date().toISOString()
                 });
@@ -630,6 +617,7 @@
             document.getElementById('taskInsideModalTitle').innerHTML = '✏️ Редактировать задачу';
             document.getElementById('taskInsideTitle').value = task.title;
             document.getElementById('taskInsideDeadline').value = task.deadline || '';
+            document.getElementById('taskInsideDifficulty').value = task.difficulty || 'low';
             document.getElementById('taskInsideModal').classList.add('active');
         };
         window.deleteTask = function(taskId) {
@@ -660,6 +648,7 @@
             if (!subject) return;
             if (!subject.tasks) subject.tasks = [];
             const deadline = document.getElementById('globalTaskDeadline').value;
+            const difficulty = document.getElementById('globalTaskDifficulty').value;
             if (window._editingGlobalTask) {
                 const oldSubject = studyData.subjects.find(s => s.id === window._editingGlobalTask.subjectId);
                 if (oldSubject && oldSubject.tasks) {
@@ -671,6 +660,7 @@
                         }
                         task.title = title;
                         task.deadline = deadline || null;
+                        task.difficulty = difficulty;
                     }
                 }
             } else {
@@ -678,6 +668,7 @@
                     id: generateId(),
                     title: title,
                     deadline: deadline || null,
+                    difficulty: difficulty,
                     completed: false,
                     createdAt: new Date().toISOString()
                 });
@@ -705,6 +696,7 @@
             document.getElementById('globalTaskSubjectId').value = subjectId;
             document.getElementById('globalTaskTitle').value = task.title;
             document.getElementById('globalTaskDeadline').value = task.deadline || '';
+            document.getElementById('globalTaskDifficulty').value = task.difficulty || 'low';
             window._editingGlobalTask = { taskId, subjectId };
             document.getElementById('globalTaskModal').classList.add('active');
         };
